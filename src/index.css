@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles for frozen columns */
+.table-wrapper {
+  position: relative;
+  overflow: auto;
+  max-height: calc(100vh - 300px);
+  border-radius: 0.5rem;
+  max-width: 100%; /* Ensure wrapper doesn't exceed container width */
+}
+
+.table-wrapper table {
+  position: relative;
+  border-collapse: separate;
+}
+
+/* Frozen header */
+.table-wrapper thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: rgb(249 250 251); /* bg-gray-50 */
+}
+
+/* Frozen first column */
+.table-wrapper th:first-child,
+.table-wrapper td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: white;
+}
+
+/* Handle header and first column intersection */
+.table-wrapper thead th:first-child {
+  z-index: 3;
+  background-color: rgb(249 250 251); /* bg-gray-50 */
+}
+
+/* Add shadow to frozen elements */
+.table-wrapper th:first-child::after,
+.table-wrapper td:first-child::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -10px;
+  bottom: 0;
+  width: 10px;
+  background: linear-gradient(to right, rgba(0,0,0,0.1), transparent);
+  pointer-events: none;
+}
+
+.table-wrapper thead th::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -10px;
+  height: 10px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.1), transparent);
+  pointer-events: none;
+}
+
+/* Handle hover states */
+.table-wrapper tbody tr:hover td {
+  background-color: rgb(249 250 251); /* bg-gray-50 */
+}
+
+.table-wrapper tbody tr:hover td:first-child {
+  background-color: rgb(249 250 251); /* bg-gray-50 */
+}
