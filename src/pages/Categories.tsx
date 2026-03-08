@@ -1,20 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { Plus, Edit, Trash, X, Check, Loader2 } from 'lucide-react';
-
-interface Category {
-  id: number;
-  name: string;
-  value: string;
-  user_id: string;
-}
+import { useQueryClient } from '@tanstack/react-query';
+import { useCategories, Category } from '../hooks/useCategories';
 
 export default function Categories() {
   const { user } = useAuth();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -25,11 +19,7 @@ export default function Categories() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      fetchCategories();
-    }
-  }, [user]);
+  const { data: categories = [], isLoading } = useCategories(user?.id);
 
   // Clear success message after 3 seconds
   useEffect(() => {
@@ -41,43 +31,17 @@ export default function Categories() {
     }
   }, [success]);
 
-  const fetchCategories = async () => {
-    setIsLoading(true);
-    
-    try {
-      const { data, error } = await supabase
-        .from('categorias')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('name', { ascending: true });
-      
-      if (error) {
-        console.error('Error fetching categories:', error);
-        setCategories([]);
-      } else if (data) {
-        setCategories(data);
-      } else {
-        setCategories([]);
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      setCategories([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
-    
+
     if (!newCategoryName.trim()) {
       setError('O nome da categoria não pode estar vazio');
       setIsSubmitting(false);
       return;
     }
-    
+
     try {
       // Generate a slug-like value from the name
       const value = newCategoryName
@@ -86,33 +50,33 @@ export default function Categories() {
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^\w\s]/g, '')
         .replace(/\s+/g, '_');
-      
+
       // Check if category with same name or value already exists
       const existingCategory = categories.find(
         cat => cat.name.toLowerCase() === newCategoryName.toLowerCase() || cat.value === value
       );
-      
+
       if (existingCategory) {
         setError('Uma categoria com este nome já existe');
         setIsSubmitting(false);
         return;
       }
-      
+
       const { error } = await supabase
         .from('categorias')
         .insert([
-          { 
+          {
             name: newCategoryName,
             value: value,
-            user_id: user.id
+            user_id: user!.id
           }
         ]);
-      
+
       if (error) throw error;
-      
+
       // Refresh categories list
-      await fetchCategories();
-      
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+
       // Reset form and close modal
       setNewCategoryName('');
       setIsAddModalOpen(false);
@@ -129,19 +93,25 @@ export default function Categories() {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
-    
+
     if (!editCategoryName.trim()) {
       setError('O nome da categoria não pode estar vazio');
       setIsSubmitting(false);
       return;
     }
-    
+
     if (!selectedCategory) {
       setError('Nenhuma categoria selecionada');
       setIsSubmitting(false);
       return;
     }
-    
+
+    if (!user?.id) {
+      setError('Usuário não autenticado.');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       // Generate a slug-like value from the name
       const value = editCategoryName
@@ -150,32 +120,32 @@ export default function Categories() {
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^\w\s]/g, '')
         .replace(/\s+/g, '_');
-      
+
       // Check if another category with same name or value already exists
       const existingCategory = categories.find(
         cat => (cat.name.toLowerCase() === editCategoryName.toLowerCase() || cat.value === value) && cat.id !== selectedCategory.id
       );
-      
+
       if (existingCategory) {
         setError('Uma categoria com este nome já existe');
         setIsSubmitting(false);
         return;
       }
-      
+
       const { error } = await supabase
         .from('categorias')
-        .update({ 
+        .update({
           name: editCategoryName,
           value: value
         })
         .eq('id', selectedCategory.id)
-        .eq('user_id', user.id);
-      
+        .eq('user_id', user!.id);
+
       if (error) throw error;
-      
+
       // Refresh categories list
-      await fetchCategories();
-      
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+
       // Reset form and close modal
       setEditCategoryName('');
       setSelectedCategory(null);
@@ -192,25 +162,31 @@ export default function Categories() {
   const handleDeleteCategory = async () => {
     setIsSubmitting(true);
     setError(null);
-    
+
     if (!selectedCategory) {
       setError('Nenhuma categoria selecionada');
       setIsSubmitting(false);
       return;
     }
-    
+
+    if (!user?.id) {
+      setError('Usuário não autenticado.');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('categorias')
         .delete()
         .eq('id', selectedCategory.id)
-        .eq('user_id', user.id);
-      
+        .eq('user_id', user!.id);
+
       if (error) throw error;
-      
+
       // Refresh categories list
-      await fetchCategories();
-      
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+
       // Reset form and close modal
       setSelectedCategory(null);
       setIsDeleteModalOpen(false);
@@ -236,10 +212,10 @@ export default function Categories() {
 
   return (
     <Layout title="Categorias">
-      <div>
+      <div className="flex flex-col h-full">
         {/* Success message */}
         {success && (
-          <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded">
+          <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded flex-shrink-0">
             <div className="flex items-center">
               <Check className="h-5 w-5 mr-2" />
               <p>{success}</p>
@@ -248,14 +224,14 @@ export default function Categories() {
         )}
 
         {/* Header with add button */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6 flex-shrink-0">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Gerenciar Categorias</h2>
             <p className="text-gray-600 mt-1">
               Visualize, edite e crie novas categorias para organizar suas transações.
             </p>
           </div>
-          <button 
+          <button
             onClick={() => setIsAddModalOpen(true)}
             className="flex items-center px-4 py-2 bg-[#11ab77] text-white rounded-md hover:bg-[#0e9968]"
           >
@@ -265,10 +241,10 @@ export default function Categories() {
         </div>
 
         {/* Categories list */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="bg-white rounded-lg shadow flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Nome
@@ -284,7 +260,7 @@ export default function Categories() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {isLoading ? (
                   // Loading state
-                  Array.from({ length: 5 }).map((_, index) => (
+                  Array.from({ length: 15 }).map((_, index) => (
                     <tr key={index}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="animate-pulse h-4 bg-gray-200 rounded w-32"></div>
@@ -316,6 +292,13 @@ export default function Categories() {
                           >
                             <Edit size={18} />
                           </button>
+                          <button
+                            onClick={() => openDeleteModal(category)}
+                            className="text-gray-400 hover:text-red-500 transition-colors"
+                            title="Excluir"
+                          >
+                            <Trash size={18} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -342,7 +325,7 @@ export default function Categories() {
               <h2 className="text-xl font-semibold text-gray-800">
                 Nova Categoria
               </h2>
-              <button 
+              <button
                 onClick={() => setIsAddModalOpen(false)}
                 className="text-gray-500 hover:text-gray-700"
                 disabled={isSubmitting}
@@ -350,13 +333,13 @@ export default function Categories() {
                 <X size={20} />
               </button>
             </div>
-            
+
             {error && (
               <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mx-4 mt-4">
                 <p>{error}</p>
               </div>
             )}
-            
+
             <form onSubmit={handleAddCategory} className="p-4">
               <div className="mb-4">
                 <label htmlFor="categoryName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -373,7 +356,7 @@ export default function Categories() {
                   required
                 />
               </div>
-              
+
               <div className="flex justify-end space-x-3">
                 <button
                   type="button"
@@ -411,7 +394,7 @@ export default function Categories() {
               <h2 className="text-xl font-semibold text-gray-800">
                 Editar Categoria
               </h2>
-              <button 
+              <button
                 onClick={() => setIsEditModalOpen(false)}
                 className="text-gray-500 hover:text-gray-700"
                 disabled={isSubmitting}
@@ -419,13 +402,13 @@ export default function Categories() {
                 <X size={20} />
               </button>
             </div>
-            
+
             {error && (
               <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mx-4 mt-4">
                 <p>{error}</p>
               </div>
             )}
-            
+
             <form onSubmit={handleEditCategory} className="p-4">
               <div className="mb-4">
                 <label htmlFor="editCategoryName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -442,7 +425,7 @@ export default function Categories() {
                   required
                 />
               </div>
-              
+
               <div className="flex justify-end space-x-3">
                 <button
                   type="button"
@@ -480,7 +463,7 @@ export default function Categories() {
               <h2 className="text-xl font-semibold text-gray-800">
                 Confirmar Exclusão
               </h2>
-              <button 
+              <button
                 onClick={() => setIsDeleteModalOpen(false)}
                 className="text-gray-500 hover:text-gray-700"
                 disabled={isSubmitting}
@@ -488,13 +471,13 @@ export default function Categories() {
                 <X size={20} />
               </button>
             </div>
-            
+
             {error && (
               <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mx-4 mt-4">
                 <p>{error}</p>
               </div>
             )}
-            
+
             <div className="p-4">
               <p className="text-gray-700 mb-4">
                 Tem certeza que deseja excluir a categoria <strong>{selectedCategory.name}</strong>?
@@ -502,7 +485,7 @@ export default function Categories() {
               <p className="text-red-600 text-sm mb-6">
                 Esta ação não pode ser desfeita e pode afetar transações que usam esta categoria.
               </p>
-              
+
               <div className="flex justify-end space-x-3">
                 <button
                   type="button"

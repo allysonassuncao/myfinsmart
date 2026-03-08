@@ -1,67 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
 import { Edit, Plus, Filter, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Layout from '../components/Layout';
 import TransactionEditModal from '../components/TransactionEditModal';
-
-interface Transaction {
-  id: number;
-  registro_id: string;
-  descricao: string;
-  valor: number;
-  data: string;
-  hora: string;
-  tipo_name: string;
-  categoria_name: string;
-  subcategoria_name: string;
-  tipo: string;
-  categoria: string;
-}
-
-interface FilterOptions {
-  startDate: string;
-  endDate: string;
-  tipo: string;
-  categoria: string;
-  subcategoria: string;
-  minValue: string;
-  maxValue: string;
-}
-
-interface TipoOption {
-  id: number;
-  name: string;
-  value: string;
-}
-
-interface CategoriaOption {
-  id: number;
-  name: string;
-  value: string;
-}
-
-interface SubcategoriaOption {
-  id: number;
-  name: string;
-  value: string;
-  tipo_value: string;
-  categoria_value: string;
-}
+import { useQueryClient } from '@tanstack/react-query';
+import { useTransactions, useTransactionFilters, FilterOptions } from '../hooks/useTransactions';
 
 export default function Transactions() {
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+
   // Filter states
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
@@ -83,181 +38,54 @@ export default function Transactions() {
     maxValue: ''
   });
   const [filtersApplied, setFiltersApplied] = useState(false);
-  
-  // Options for dropdowns
-  const [tipos, setTipos] = useState<TipoOption[]>([]);
-  const [categorias, setCategorias] = useState<CategoriaOption[]>([]);
-  const [subcategorias, setSubcategorias] = useState<SubcategoriaOption[]>([]);
-  const [filteredSubcategorias, setFilteredSubcategorias] = useState<SubcategoriaOption[]>([]);
 
-  useEffect(() => {
-    if (user) {
-      fetchTransactions();
-      fetchFilterOptions();
-    }
-  }, [user, currentPage, itemsPerPage, activeFilters, searchTerm]);
+  // Query Filters data
+  const { data: filterData = { tipos: [], categorias: [], subcategorias: [] } } = useTransactionFilters(user?.id);
+  const { tipos, categorias, subcategorias } = filterData;
+  const [filteredSubcategorias, setFilteredSubcategorias] = useState<any[]>([]);
+
+  // Main Transactions Query
+  const { data: transactionInfo = { data: [], count: 0 }, isLoading } = useTransactions(
+    user?.id,
+    currentPage,
+    itemsPerPage,
+    activeFilters,
+    searchTerm,
+    filtersApplied,
+    tipos,
+    categorias,
+    subcategorias
+  );
+
+  const transactions = transactionInfo.data;
+  const totalPages = Math.ceil(transactionInfo.count / itemsPerPage);
 
   useEffect(() => {
     // Filter subcategorias based on selected tipo and categoria in filter modal
     if (subcategorias.length > 0) {
-      filterSubcategorias();
+      filterSubcategoriasLogic();
     }
   }, [filterOptions.tipo, filterOptions.categoria, subcategorias]);
 
-  const fetchFilterOptions = async () => {
-    try {
-      const userId = user?.id;
-      
-      if (!userId) {
-        throw new Error('User not authenticated');
-      }
-
-      // Fetch tipos
-      const { data: tiposData, error: tiposError } = await supabase
-        .from('tipos')
-        .select('id, name, value')
-        .eq('user_id', userId);
-      
-      if (tiposError) throw tiposError;
-      setTipos(tiposData || []);
-
-      // Fetch categorias
-      const { data: categoriasData, error: categoriasError } = await supabase
-        .from('categorias')
-        .select('id, name, value')
-        .eq('user_id', userId);
-      
-      if (categoriasError) throw categoriasError;
-      setCategorias(categoriasData || []);
-
-      // Fetch subcategorias with the new columns
-      const { data: subcategoriasData, error: subcategoriasError } = await supabase
-        .from('subcategorias')
-        .select('id, name, value, tipo_value, categoria_value')
-        .eq('user_id', userId);
-      
-      if (subcategoriasError) throw subcategoriasError;
-      setSubcategorias(subcategoriasData || []);
-      setFilteredSubcategorias(subcategoriasData || []);
-      
-    } catch (error) {
-      console.error('Error fetching filter options:', error);
-    }
-  };
-
-  const filterSubcategorias = () => {
+  const filterSubcategoriasLogic = () => {
     if (!filterOptions.tipo && !filterOptions.categoria) {
-      // If no tipo or categoria selected, show all subcategorias
       setFilteredSubcategorias(subcategorias);
       return;
     }
 
-    // Get the selected tipo and categoria values
-    const selectedTipo = filterOptions.tipo ? 
-      tipos.find(t => t.id.toString() === filterOptions.tipo)?.value : null;
-    
-    const selectedCategoria = filterOptions.categoria ? 
-      categorias.find(c => c.id.toString() === filterOptions.categoria)?.value : null;
+    const selectedTipo = filterOptions.tipo ?
+      tipos.find((t: any) => t.id.toString() === filterOptions.tipo)?.value : null;
 
-    // Filter subcategorias based on tipo_value and categoria_value
-    const filtered = subcategorias.filter(sub => {
+    const selectedCategoria = filterOptions.categoria ?
+      categorias.find((c: any) => c.id.toString() === filterOptions.categoria)?.value : null;
+
+    const filtered = subcategorias.filter((sub: any) => {
       const matchesTipo = !selectedTipo || sub.tipo_value === selectedTipo;
       const matchesCategoria = !selectedCategoria || sub.categoria_value === selectedCategoria;
-      
       return matchesTipo && matchesCategoria;
     });
 
     setFilteredSubcategorias(filtered);
-  };
-
-  const fetchTransactions = async () => {
-    setIsLoading(true);
-    
-    try {
-      let query = supabase
-        .from('view_todos_registros')
-        .select('id, registro_id, descricao, valor, data, hora, tipo_name, categoria_name, subcategoria_name, tipo, categoria', { count: 'exact' })
-        .eq('user_id', user.id);
-      
-      // Apply search term if it exists
-      if (searchTerm) {
-        query = query.or(`descricao.ilike.%${searchTerm}%,tipo_name.ilike.%${searchTerm}%,categoria_name.ilike.%${searchTerm}%,subcategoria_name.ilike.%${searchTerm}%`);
-      }
-
-      // Apply filters if they exist
-      if (filtersApplied) {
-        // Date range filter
-        if (activeFilters.startDate) {
-          query = query.gte('data', activeFilters.startDate);
-        }
-        if (activeFilters.endDate) {
-          query = query.lte('data', activeFilters.endDate);
-        }
-        
-        // Tipo filter
-        if (activeFilters.tipo) {
-          const selectedTipo = tipos.find(t => t.id.toString() === activeFilters.tipo);
-          if (selectedTipo) {
-            query = query.eq('tipo', selectedTipo.value);
-          }
-        }
-        
-        // Categoria filter
-        if (activeFilters.categoria) {
-          const selectedCategoria = categorias.find(c => c.id.toString() === activeFilters.categoria);
-          if (selectedCategoria) {
-            query = query.eq('categoria', selectedCategoria.value);
-          }
-        }
-        
-        // Subcategoria filter
-        if (activeFilters.subcategoria) {
-          const selectedSubcategoria = subcategorias.find(s => s.id.toString() === activeFilters.subcategoria);
-          if (selectedSubcategoria) {
-            query = query.eq('subcategoria', selectedSubcategoria.value);
-          }
-        }
-        
-        // Value range filter
-        if (activeFilters.minValue) {
-          query = query.gte('valor', parseFloat(activeFilters.minValue));
-        }
-        if (activeFilters.maxValue) {
-          query = query.lte('valor', parseFloat(activeFilters.maxValue));
-        }
-      }
-      
-      // Calculate pagination
-      const from = (currentPage - 1) * itemsPerPage;
-      const to = from + itemsPerPage - 1;
-      
-      // Add pagination to query
-      query = query
-        .order('data', { ascending: false })
-        .order('hora', { ascending: false })
-        .range(from, to);
-      
-      const { data, error, count } = await query;
-      
-      if (error) {
-        console.error('Error fetching transactions:', error);
-        setTransactions([]);
-      } else if (data) {
-        setTransactions(data);
-        
-        // Calculate total pages
-        if (count !== null) {
-          setTotalPages(Math.ceil(count / itemsPerPage));
-        }
-      } else {
-        setTransactions([]);
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      setTransactions([]);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   // Format currency values
@@ -271,7 +99,7 @@ export default function Transactions() {
   // Format date values
   const formatDate = (dateStr: string, timeStr: string) => {
     if (!dateStr) return '';
-    
+
     const [year, month, day] = dateStr.split('-');
     return `${day}/${month}/${year} ${timeStr || ''}`;
   };
@@ -293,7 +121,7 @@ export default function Transactions() {
 
   const handleTransactionSaved = () => {
     // Refresh data after a transaction is saved
-    fetchTransactions();
+    queryClient.invalidateQueries({ queryKey: ['transactions'] });
   };
 
   const handlePageChange = (page: number) => {
@@ -316,9 +144,9 @@ export default function Transactions() {
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     setFilterOptions(prev => ({ ...prev, [name]: value }));
-    
+
     // Reset subcategoria when tipo or categoria changes
     if (name === 'tipo' || name === 'categoria') {
       setFilterOptions(prev => ({ ...prev, subcategoria: '' }));
@@ -342,7 +170,7 @@ export default function Transactions() {
       minValue: '',
       maxValue: ''
     };
-    
+
     setFilterOptions(emptyFilters);
     setActiveFilters(emptyFilters);
     setFiltersApplied(false);
@@ -356,9 +184,9 @@ export default function Transactions() {
 
   return (
     <Layout title="Transações">
-      <div>
+      <div className="flex flex-col h-full">
         {/* Search and filters */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="mb-6 flex flex-col sm:flex-row gap-4 flex-shrink-0">
           <div className="relative flex-grow">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-gray-400" />
@@ -372,19 +200,18 @@ export default function Transactions() {
             />
           </div>
           <div className="flex gap-2">
-            <button 
-              className={`flex items-center px-4 py-2 border rounded-md hover:bg-gray-50 ${
-                filtersApplied 
-                  ? 'bg-[#e6f7f1] border-[#11ab77] text-[#11ab77]' 
-                  : 'bg-white border-gray-300 text-gray-700'
-              }`}
+            <button
+              className={`flex items-center px-4 py-2 border rounded-md hover:bg-gray-50 ${filtersApplied
+                ? 'bg-[#e6f7f1] border-[#11ab77] text-[#11ab77]'
+                : 'bg-white border-gray-300 text-gray-700'
+                }`}
               onClick={handleOpenFilterModal}
             >
               <Filter className="h-5 w-5 mr-2" />
               <span>Filtros</span>
               {filtersApplied && <span className="ml-1 text-xs bg-[#11ab77] text-white rounded-full w-5 h-5 flex items-center justify-center">✓</span>}
             </button>
-            <button 
+            <button
               onClick={handleNewTransaction}
               className="flex items-center px-4 py-2 bg-[#11ab77] text-white rounded-md hover:bg-[#0e9968]"
             >
@@ -395,10 +222,10 @@ export default function Transactions() {
         </div>
 
         {/* Transactions table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="bg-white rounded-lg shadow flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Descrição
@@ -417,7 +244,7 @@ export default function Transactions() {
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Valor
-                  </th>                  
+                  </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Ações
                   </th>
@@ -426,7 +253,7 @@ export default function Transactions() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {isLoading ? (
                   // Loading state
-                  Array.from({ length: 6 }).map((_, index) => (
+                  Array.from({ length: 15 }).map((_, index) => (
                     <tr key={index}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="animate-pulse h-4 bg-gray-200 rounded w-24"></div>
@@ -477,7 +304,7 @@ export default function Transactions() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        <button 
+                        <button
                           onClick={() => handleEditTransaction(transaction.registro_id)}
                           className="text-gray-400 hover:text-[#11ab77] transition-colors"
                           title="Editar"
@@ -498,10 +325,10 @@ export default function Transactions() {
               </tbody>
             </table>
           </div>
-          
+
           {/* Pagination */}
           {!isLoading && transactions.length > 0 && (
-            <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200">
+            <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 flex-shrink-0 bg-white">
               <div className="flex items-center">
                 <span className="text-sm text-gray-700 mr-2">
                   Mostrar
@@ -523,7 +350,7 @@ export default function Transactions() {
                   por página
                 </span>
               </div>
-              
+
               <div className="flex items-center">
                 <span className="text-sm text-gray-700 mr-4">
                   Página {currentPage} de {totalPages}
@@ -532,22 +359,20 @@ export default function Transactions() {
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className={`p-2 rounded-md ${
-                      currentPage === 1
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
+                    className={`p-2 rounded-md ${currentPage === 1
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : 'text-gray-700 hover:bg-gray-100'
+                      }`}
                   >
                     <ChevronLeft size={16} />
                   </button>
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className={`p-2 rounded-md ${
-                      currentPage === totalPages
-                        ? 'text-gray-400 cursor-not-allowed'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
+                    className={`p-2 rounded-md ${currentPage === totalPages
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : 'text-gray-700 hover:bg-gray-100'
+                      }`}
                   >
                     <ChevronRight size={16} />
                   </button>
@@ -559,13 +384,13 @@ export default function Transactions() {
       </div>
 
       {/* Transaction Edit Modal */}
-      <TransactionEditModal 
+      <TransactionEditModal
         isOpen={isEditModalOpen}
         onClose={handleCloseModal}
         transactionId={selectedTransactionId}
         onSave={handleTransactionSaved}
       />
-      
+
       {/* Filter Modal */}
       {isFilterModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -574,14 +399,14 @@ export default function Transactions() {
               <h2 className="text-xl font-semibold text-gray-800">
                 Filtrar Transações
               </h2>
-              <button 
+              <button
                 onClick={handleCloseFilterModal}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <X size={20} />
               </button>
             </div>
-            
+
             <div className="p-4">
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Período</h3>
@@ -614,7 +439,7 @@ export default function Transactions() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Categorização</h3>
                 <div className="space-y-3">
@@ -637,7 +462,7 @@ export default function Transactions() {
                       ))}
                     </select>
                   </div>
-                  
+
                   <div>
                     <label htmlFor="categoria" className="block text-xs text-gray-500 mb-1">
                       Categoria
@@ -657,7 +482,7 @@ export default function Transactions() {
                       ))}
                     </select>
                   </div>
-                  
+
                   <div>
                     <label htmlFor="subcategoria" className="block text-xs text-gray-500 mb-1">
                       Subcategoria
@@ -679,7 +504,7 @@ export default function Transactions() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="mb-6">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Valor (R$)</h3>
                 <div className="grid grid-cols-2 gap-4">
@@ -713,7 +538,7 @@ export default function Transactions() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex justify-between">
                 <button
                   onClick={handleResetFilters}

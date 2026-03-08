@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
-import { 
-  DollarSign, 
-  BarChart3, 
-  CreditCard, 
-  PieChart, 
-  Wallet, 
-  ArrowUpRight, 
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import {
+  PieChart,
+  Wallet,
+  ArrowUpRight,
   ArrowDownRight,
-  User,
   ChevronDown,
-  Edit
+  Edit,
+  TrendingUp,
+  TrendingDown,
+  PiggyBank,
+  Star,
+  ListTodo
 } from 'lucide-react';
-import { Bar, Pie, Doughnut } from 'react-chartjs-2';
+import { Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -24,8 +24,25 @@ import {
   Legend,
   ArcElement
 } from 'chart.js';
-import Layout from '../components/Layout';
-import TransactionEditModal from '../components/TransactionEditModal';
+import Layout from '@/components/Layout';
+import TransactionEditModal from '@/components/TransactionEditModal';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  useFinancialData,
+  useExpenseByType,
+  useExpenseByCategory,
+  useRecentTransactions,
+  useChartData,
+  useWishlist
+} from '@/hooks/useDashboardData';
 
 // Register ChartJS components
 ChartJS.register(
@@ -38,361 +55,35 @@ ChartJS.register(
   Legend
 );
 
-// Interface for financial data
-interface FinancialData {
-  receita: number;
-  gasto: number;
-  saldo: number;
-  investimento: number;
-  valor_cartoes: number;
-}
-
-// Interface for transaction data
-interface Transaction {
-  id: number;
-  registro_id: string;
-  descricao: string;
-  valor: number;
-  data: string;
-  hora: string;
-  tipo_name: string;
-  categoria_name: string;
-  subcategoria_name: string;
-  tipo: string;
-  categoria: string;
-}
-
-// Interface for monthly chart data
-interface MonthlyChartData {
-  month: string;
-  receita: number;
-  gasto: number;
-  valor_cartoes: number;
-}
-
-// Interface for expense by type data
-interface ExpenseByTypeData {
-  tipo_name: string;
-  soma_valor: number;
-  tipo_value: string;
-}
-
-// Interface for expense by category data
-interface ExpenseByCategoryData {
-  categoria_name: string;
-  soma_valor: number;
-  categoria_value: string;
-}
-
 export default function Dashboard() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState('');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [monthOptions, setMonthOptions] = useState<string[]>([]);
-  const [financialData, setFinancialData] = useState<FinancialData>({
-    receita: 0,
-    gasto: 0,
-    saldo: 0,
-    investimento: 0,
-    valor_cartoes: 0
-  });
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
-  const [chartData, setChartData] = useState<MonthlyChartData[]>([]);
-  const [isLoadingChart, setIsLoadingChart] = useState(true);
-  const [expenseByTypeData, setExpenseByTypeData] = useState<ExpenseByTypeData[]>([]);
-  const [isLoadingExpenseChart, setIsLoadingExpenseChart] = useState(true);
-  const [expenseByCategoryData, setExpenseByCategoryData] = useState<ExpenseByCategoryData[]>([]);
-  const [isLoadingExpenseCategoryChart, setIsLoadingExpenseCategoryChart] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
 
+  // TanStack Query Hooks
+  const { data: financialData = { receita: 0, gasto: 0, saldo: 0, investimento: 0, valor_cartoes: 0 }, isLoading: isLoadingFinancial } = useFinancialData(user?.id, selectedMonth);
+  const { data: expenseByTypeData = [], isLoading: isLoadingExpenseChart } = useExpenseByType(user?.id, selectedMonth);
+  const { data: expenseByCategoryData = [], isLoading: isLoadingExpenseCategoryChart } = useExpenseByCategory(user?.id, selectedMonth);
+  const { data: transactions = [], isLoading: isLoadingTransactions } = useRecentTransactions(user?.id);
+  const { data: chartData = [], isLoading: isLoadingChart } = useChartData(user?.id);
+  const { data: wishlist = [], isLoading: isLoadingWishlist } = useWishlist(user?.id);
+
   useEffect(() => {
-    // Generate months options including next month
+    // Generate months options
     const months = [];
     const currentDate = new Date();
-    
-    // Start from next month (i = -1) and include 6 months back
     for (let i = -1; i < 5; i++) {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-      const month = date.getMonth() + 1;
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
       const year = date.getFullYear();
-      months.push(`${month.toString().padStart(2, '0')}/${year}`);
+      months.push(`${month}/${year}`);
     }
-    
     setMonthOptions(months);
-    setSelectedMonth(months[1]); // Set current month as default (index 1 since next month is at index 0)
+    setSelectedMonth(months[1]);
   }, []);
-
-  useEffect(() => {
-    if (user && selectedMonth) {
-      fetchFinancialData();
-      fetchExpenseByTypeData();
-      fetchExpenseByCategoryData();
-    }
-  }, [user, selectedMonth]);
-
-  useEffect(() => {
-    if (user) {
-      fetchRecentTransactions();
-      fetchChartData();
-    }
-  }, [user]);
-
-  const fetchFinancialData = async () => {
-    if (!user || !selectedMonth) return;
-    
-    setIsLoading(true);
-    
-    try {
-      // Parse the selected month to create a date string for the query
-      const [month, year] = selectedMonth.split('/');
-      const dateString = `${year}-${month}-01`; // First day of the month
-      
-      // Query the view_total_saldo_mensal table
-      const { data, error } = await supabase
-        .from('view_total_saldo_mensal')
-        .select('receita, gasto, saldo, investimento, valor_cartoes')
-        .eq('user_id', user.id)
-        .eq('mes', dateString)
-        .single();
-      
-      if (error) {
-        console.error('Error fetching financial data:', error);
-        // Set default values if there's an error
-        setFinancialData({
-          receita: 0,
-          gasto: 0,
-          saldo: 0,
-          investimento: 0,
-          valor_cartoes: 0
-        });
-      } else if (data) {
-        const totalGasto = (data.gasto || 0) + (data.valor_cartoes || 0);
-        // Update state with the fetched data and recalculate saldo
-        setFinancialData({
-          receita: data.receita || 0,
-          gasto: totalGasto, // Soma o valor dos cartões ao gasto
-          saldo: (data.receita || 0) - totalGasto, // Recalcula o saldo considerando o gasto total
-          investimento: data.investimento || 0,
-          valor_cartoes: data.valor_cartoes || 0
-        });
-      } else {
-        // No data found for this month, set defaults
-        setFinancialData({
-          receita: 0,
-          gasto: 0,
-          saldo: 0,
-          investimento: 0,
-          valor_cartoes: 0
-        });
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      setFinancialData({
-        receita: 0,
-        gasto: 0,
-        saldo: 0,
-        investimento: 0,
-        valor_cartoes: 0
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchExpenseByTypeData = async () => {
-    if (!user || !selectedMonth) return;
-    
-    setIsLoadingExpenseChart(true);
-    
-    try {
-      // Parse the selected month to create a date string for the query
-      const [month, year] = selectedMonth.split('/');
-      const dateString = `${year}-${month}-01`; // First day of the month
-      
-      // Query the view_gasto_mensal_por_tipo table
-      const { data, error } = await supabase
-        .from('view_gasto_mensal_por_tipo')
-        .select('tipo_name, soma_valor, tipo_value')
-        .eq('user_id', user.id)
-        .eq('mes', dateString);
-      
-      if (error) {
-        console.error('Error fetching expense by type data:', error);
-        setExpenseByTypeData([]);
-      } else if (data && data.length > 0) {
-        // Filter out "receita" and "liberdade_financeira" types
-        const filteredData = data.filter(item => 
-          item.tipo_value !== 'receita' && 
-          item.tipo_value !== 'liberdade_financeira'
-        );
-        setExpenseByTypeData(filteredData);
-      } else {
-        setExpenseByTypeData([]);
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      setExpenseByTypeData([]);
-    } finally {
-      setIsLoadingExpenseChart(false);
-    }
-  };
-
-  const fetchExpenseByCategoryData = async () => {
-    if (!user || !selectedMonth) return;
-    
-    setIsLoadingExpenseCategoryChart(true);
-    
-    try {
-      // Parse the selected month to create a date string for the query
-      const [month, year] = selectedMonth.split('/');
-      const dateString = `${year}-${month}-01`; // First day of the month
-      
-      // Query the view_gasto_mensal_por_categoria table
-      const { data, error } = await supabase
-        .from('view_gasto_mensal_por_categoria')
-        .select('categoria_name, soma_valor, categoria_value')
-        .eq('user_id', user.id)
-        .eq('mes', dateString);
-      
-      if (error) {
-        console.error('Error fetching expense by category data:', error);
-        setExpenseByCategoryData([]);
-      } else if (data && data.length > 0) {
-        // Filter out "receita" and "liberdade_financeira" types
-        const filteredData = data.filter(item => 
-          item.categoria_value !== 'receita' && 
-          item.categoria_value !== 'investimento'
-        );
-        setExpenseByCategoryData(filteredData);
-      } else {
-        setExpenseByCategoryData([]);
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      setExpenseByCategoryData([]);
-    } finally {
-      setIsLoadingExpenseCategoryChart(false);
-    }
-  };
-
-  const fetchRecentTransactions = async () => {
-    if (!user) return;
-    
-    setIsLoadingTransactions(true);
-    
-    try {
-      // Query the view_todos_registros table
-      const { data, error } = await supabase
-        .from('view_todos_registros')
-        .select('id, registro_id, descricao, valor, data, hora, tipo_name, categoria_name, subcategoria_name, tipo, categoria')
-        .eq('user_id', user.id)
-        .order('data', { ascending: false })
-        .order('hora', { ascending: false })
-        .limit(20);
-      
-      if (error) {
-        console.error('Error fetching transactions:', error);
-        setTransactions([]);
-      } else if (data) {
-        setTransactions(data);
-      } else {
-        setTransactions([]);
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      setTransactions([]);
-    } finally {
-      setIsLoadingTransactions(false);
-    }
-  };
-
-  const fetchChartData = async () => {
-    if (!user) return;
-    
-    setIsLoadingChart(true);
-    
-    try {
-      // Generate the last 6 months for chart (oldest to newest)
-      const monthsArray = [];
-      const currentDate = new Date();
-      
-      for (let i = 5; i >= 0; i--) {
-        const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-        const month = date.getMonth() + 1;
-        const year = date.getFullYear();
-        const dateString = `${year}-${month.toString().padStart(2, '0')}-01`;
-        const displayMonth = `${month.toString().padStart(2, '0')}/${year}`;
-        
-        monthsArray.push({
-          dateString,
-          displayMonth
-        });
-      }
-
-      // Add next month
-      const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-      const nextMonthNum = nextMonth.getMonth() + 1;
-      const nextMonthYear = nextMonth.getFullYear();
-      monthsArray.push({
-        dateString: `${nextMonthYear}-${nextMonthNum.toString().padStart(2, '0')}-01`,
-        displayMonth: `${nextMonthNum.toString().padStart(2, '0')}/${nextMonthYear}`
-      });
-      
-      // Query the view_total_saldo_mensal table for all months
-      const { data, error } = await supabase
-        .from('view_total_saldo_mensal')
-        .select('mes, receita, gasto, valor_cartoes')
-        .eq('user_id', user.id)
-        .in('mes', monthsArray.map(m => m.dateString));
-      
-      if (error) {
-        console.error('Error fetching chart data:', error);
-        // Create empty chart data
-        setChartData(monthsArray.map(m => ({
-          month: m.displayMonth,
-          receita: 0,
-          gasto: 0,
-          valor_cartoes: 0
-        })));
-      } else {
-        // Create a map for easier lookup
-        const dataMap = new Map();
-        
-        if (data) {
-          data.forEach(item => {
-            // Store data with the exact date string format as the key
-            dataMap.set(item.mes, {
-              receita: item.receita || 0,
-              gasto: item.gasto || 0,
-              valor_cartoes: item.valor_cartoes || 0
-            });
-          });
-        }
-        
-        // Map the data to the months, ensuring correct alignment
-        const chartData = monthsArray.map(m => {
-          const monthData = dataMap.get(m.dateString);
-          
-          return {
-            month: m.displayMonth,
-            receita: monthData ? monthData.receita : 0,
-            gasto: monthData ? monthData.gasto : 0,
-            valor_cartoes: monthData ? monthData.valor_cartoes : 0
-          };
-        });
-        
-        setChartData(chartData);
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      setChartData([]);
-    } finally {
-      setIsLoadingChart(false);
-    }
-  };
 
   // Format currency values
   const formatCurrency = (value: number) => {
@@ -405,14 +96,12 @@ export default function Dashboard() {
   // Format date values
   const formatDate = (dateStr: string, timeStr: string) => {
     if (!dateStr) return '';
-    
     const [year, month, day] = dateStr.split('-');
     return `${day}/${month}/${year} ${timeStr || ''}`;
   };
 
   const handleMonthChange = (month: string) => {
     setSelectedMonth(month);
-    setIsDropdownOpen(false);
   };
 
   const handleEditTransaction = (id: string) => {
@@ -426,12 +115,12 @@ export default function Dashboard() {
   };
 
   const handleTransactionSaved = () => {
-    // Refresh data after a transaction is saved
-    fetchRecentTransactions();
-    fetchFinancialData();
-    fetchExpenseByTypeData();
-    fetchExpenseByCategoryData();
-    fetchChartData();
+    // Refresh all data by invalidating queries
+    queryClient.invalidateQueries({ queryKey: ['financialData'] });
+    queryClient.invalidateQueries({ queryKey: ['expenseByType'] });
+    queryClient.invalidateQueries({ queryKey: ['expenseByCategory'] });
+    queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
+    queryClient.invalidateQueries({ queryKey: ['chartData'] });
   };
 
   // Prepare chart data for Chart.js
@@ -471,7 +160,7 @@ export default function Dashboard() {
       'rgba(144, 224, 186, 1)',  // Pastel green
       'rgba(255, 241, 118, 1)'   // Pastel yellow
     ];
-    
+
     // If we need more colors than we have defined, generate them
     if (count > colors.length) {
       for (let i = colors.length; i < count; i++) {
@@ -479,24 +168,20 @@ export default function Dashboard() {
         colors.push(`hsla(${hue}, 70%, 80%, 1)`);
       }
     }
-    
+
     return colors.slice(0, count);
   };
 
-  // Calculate percentages for each expense type
-  const calculatePercentages = (data: ExpenseByTypeData[] | ExpenseByCategoryData[]) => {
-    const total = data.reduce((sum, item) => sum + Math.abs(item.soma_valor), 0);
-    return data.map(item => {
-      const percentage = total > 0 ? Math.round((Math.abs(item.soma_valor) / total) * 100) : 0;
-      return {
-        ...item,
-        percentage
-      };
-    });
-  };
+  const expenseTypePercentages = dataToPercentages(expenseByTypeData);
+  const expenseCategoryPercentages = dataToPercentages(expenseByCategoryData);
 
-  const expenseTypePercentages = calculatePercentages(expenseByTypeData);
-  const expenseCategoryPercentages = calculatePercentages(expenseByCategoryData);
+  function dataToPercentages<T extends { soma_valor: number }>(data: T[]) {
+    const total = data.reduce((sum, item) => sum + Math.abs(item.soma_valor), 0);
+    return data.map(item => ({
+      ...item,
+      percentage: total > 0 ? Math.round((Math.abs(item.soma_valor) / total) * 100) : 0
+    }));
+  }
 
   // Prepare pie chart data for expense by type
   const pieChartTypeData = {
@@ -552,7 +237,7 @@ export default function Dashboard() {
       },
       tooltip: {
         callbacks: {
-          label: function(context: any) {
+          label: function (context: any) {
             const label = context.label || '';
             const value = context.raw || 0;
             const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
@@ -567,239 +252,251 @@ export default function Dashboard() {
 
   return (
     <Layout title="Início">
-      <div>
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">Visão Geral</h2>
-            <div className="relative">
-              <button 
-                className="flex items-center bg-white px-4 py-2 rounded-md shadow text-gray-700 hover:bg-gray-50"
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              >
-                {selectedMonth}
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </button>
-              
-              {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg z-10">
-                  <ul className="py-1">
-                    {monthOptions.map((month) => (
-                      <li key={month}>
-                        <button
-                          className={`block w-full text-left px-4 py-2 text-sm ${
-                            selectedMonth === month ? 'bg-gray-100 text-[#11ab77]' : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                          onClick={() => handleMonthChange(month)}
-                        >
-                          {month}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
+      <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900">Visão Geral</h2>
+            <p className="text-gray-500">Acompanhe seu desempenho financeiro em tempo real.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {/* Balance card */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-700">Saldo Total</h3>
-                <Wallet className="h-6 w-6 text-[#11ab77]" />
-              </div>
-              {isLoading ? (
-                <div className="animate-pulse h-8 bg-gray-200 rounded w-32 mb-2"></div>
-              ) : (
-                <p className="text-3xl font-bold text-gray-900">{formatCurrency(financialData.saldo)}</p>
-              )}
-            </div>
-            
-            {/* Income card */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-700">Receitas (mês)</h3>
-                <ArrowUpRight className="h-6 w-6 text-green-600" />
-              </div>
-              {isLoading ? (
-                <div className="animate-pulse h-8 bg-gray-200 rounded w-32 mb-2"></div>
-              ) : (
-                <p className="text-3xl font-bold text-green-600">{formatCurrency(financialData.receita)}</p>
-              )}
-            </div>
-            
-            {/* Expenses card */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-700">Despesas (mês)</h3>
-                <ArrowDownRight className="h-6 w-6 text-red-600" />
-              </div>
-              {isLoading ? (
-                <div className="animate-pulse h-8 bg-gray-200 rounded w-32 mb-2"></div>
-              ) : (
-                <p className="text-3xl font-bold text-red-600">{formatCurrency(financialData.gasto)}</p>
-              )}
-            </div>
 
-            {/* Investiments card */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-700">Investimentos (mês)</h3>
-                <ArrowDownRight className="h-6 w-6 text-blue-600" />
-              </div>
-              {isLoading ? (
-                <div className="animate-pulse h-8 bg-gray-200 rounded w-32 mb-2"></div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-[180px] justify-between border-gray-200 shadow-sm bg-white">
+                {selectedMonth}
+                <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[180px]">
+              {monthOptions.map((month) => (
+                <DropdownMenuItem
+                  key={month}
+                  onClick={() => handleMonthChange(month)}
+                  className={selectedMonth === month ? "bg-accent font-medium text-[#11ab77]" : ""}
+                >
+                  {month}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {/* Balance card */}
+          <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-slate-50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-600">Saldo Total</CardTitle>
+              <Wallet className="h-5 w-5 text-[#11ab77]" />
+            </CardHeader>
+            <CardContent>
+              {isLoadingFinancial ? (
+                <div className="animate-pulse h-9 bg-gray-100 rounded-md w-3/4"></div>
               ) : (
-                <p className="text-3xl font-bold text-blue-600">{formatCurrency(financialData.investimento)}</p>
+                <>
+                  <div className="text-2xl font-bold tracking-tight">{formatCurrency(financialData!.saldo)}</div>
+                  <p className="text-xs text-gray-500 mt-1">Disponível em conta</p>
+                </>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+
+          {/* Income card */}
+          <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-slate-50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-600">Receitas</CardTitle>
+              <TrendingUp className="h-5 w-5 text-emerald-500" />
+            </CardHeader>
+            <CardContent>
+              {isLoadingFinancial ? (
+                <div className="animate-pulse h-9 bg-gray-100 rounded-md w-3/4"></div>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold tracking-tight text-emerald-600">{formatCurrency(financialData!.receita)}</div>
+                  <p className="text-xs text-emerald-500/80 mt-1 font-medium flex items-center">
+                    <ArrowUpRight className="mr-1 h-3 w-3" /> Entrada este mês
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Expenses card */}
+          <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-slate-50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-600">Despesas</CardTitle>
+              <TrendingDown className="h-5 w-5 text-rose-500" />
+            </CardHeader>
+            <CardContent>
+              {isLoadingFinancial ? (
+                <div className="animate-pulse h-9 bg-gray-100 rounded-md w-3/4"></div>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold tracking-tight text-rose-600">{formatCurrency(financialData!.gasto)}</div>
+                  <div className="flex items-center mt-1">
+                    <p className="text-xs text-rose-500/80 font-medium flex items-center">
+                      <ArrowDownRight className="mr-1 h-3 w-3" /> Saída total
+                    </p>
+                    {financialData!.valor_cartoes > 0 && (
+                      <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">
+                        incl. cartões
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Investments card */}
+          <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-slate-50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-600">Investimentos</CardTitle>
+              <PiggyBank className="h-5 w-5 text-sky-500" />
+            </CardHeader>
+            <CardContent>
+              {isLoadingFinancial ? (
+                <div className="animate-pulse h-9 bg-gray-100 rounded-md w-3/4"></div>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold tracking-tight text-sky-600">{formatCurrency(financialData!.investimento)}</div>
+                  <p className="text-xs text-sky-500/80 mt-1 font-medium">Patrimônio em construção</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Charts Section */}
-        <div className="mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Expense by Type Pie Chart */}
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Despesas por Tipo</h2>
-              <div className="bg-white rounded-lg shadow p-6">
-                {isLoadingExpenseChart ? (
-                  <div className="animate-pulse h-64 bg-gray-200 rounded w-full"></div>
-                ) : expenseByTypeData.length > 0 ? (
-                  <div className="flex flex-col md:flex-row items-center">
-                    <div className="w-full md:w-1/2 h-64 relative">
-                      <Doughnut data={pieChartTypeData} options={pieChartOptions} />
-                    </div>
-                    <div className="w-full md:w-1/2 mt-4 md:mt-0">
-                      <div className="space-y-3">
-                        {expenseTypePercentages.map((item, index) => (
-                          <div key={index} className="flex items-center">
-                            <div 
-                              className="w-4 h-4 rounded-sm mr-2" 
-                              style={{ backgroundColor: pieChartTypeData.datasets[0].backgroundColor[index] }}
-                            ></div>
-                            <div className="flex-1 text-sm">
-                              <span className="font-medium">{item.tipo_name}</span>
-                            </div>
-                            <div className="text-sm font-medium">
-                              {item.percentage}%
-                            </div>
-                          </div>
-                        ))}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Expense by Type Pie Chart */}
+          <Card className="border-none shadow-md overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold">Despesas por Tipo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingExpenseChart ? (
+                <div className="animate-pulse h-64 bg-gray-100 rounded-md w-full"></div>
+              ) : expenseByTypeData.length > 0 ? (
+                <div className="flex flex-col items-center">
+                  <div className="w-full h-48 relative">
+                    <Doughnut data={pieChartTypeData} options={pieChartOptions} />
+                  </div>
+                  <div className="w-full mt-6 space-y-2">
+                    {expenseTypePercentages.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div
+                            className="w-3 h-3 rounded-full mr-2"
+                            style={{ backgroundColor: pieChartTypeData.datasets[0].backgroundColor[index] }}
+                          ></div>
+                          <span className="text-sm font-medium text-gray-600 truncate max-w-[120px]">{item.tipo_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-gray-900">{formatCurrency(item.soma_valor)}</span>
+                          <span className="text-xs font-medium text-gray-400">({item.percentage}%)</span>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                ) : (
-                  <div className="h-64 flex items-center justify-center">
-                    <p className="text-gray-500">Nenhuma despesa registrada para este mês</p>
+                </div>
+              ) : (
+                <div className="h-64 flex flex-col items-center justify-center text-center space-y-2">
+                  <PieChart className="h-10 w-10 text-gray-300" />
+                  <p className="text-gray-500 text-sm">Nenhuma despesa este mês</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Expense by Category Pie Chart */}
+          <Card className="border-none shadow-md overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold">Por Categoria</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingExpenseCategoryChart ? (
+                <div className="animate-pulse h-64 bg-gray-100 rounded-md w-full"></div>
+              ) : expenseByCategoryData.length > 0 ? (
+                <div className="flex flex-col items-center">
+                  <div className="w-full h-48 relative">
+                    <Doughnut data={pieChartCategoryData} options={pieChartOptions} />
                   </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Expense by Category Pie Chart */}
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Despesas por Categoria</h2>
-              <div className="bg-white rounded-lg shadow p-6">
-                {isLoadingExpenseCategoryChart ? (
-                  <div className="animate-pulse h-64 bg-gray-200 rounded w-full"></div>
-                ) : expenseByCategoryData.length > 0 ? (
-                  <div className="flex flex-col md:flex-row items-center">
-                    <div className="w-full md:w-1/2 h-64 relative">
-                      <Doughnut data={pieChartCategoryData} options={pieChartOptions} />
-                    </div>
-                    <div className="w-full md:w-1/2 mt-4 md:mt-0">
-                      <div className="space-y-3 max-h-64 overflow-y-auto">
-                        {expenseCategoryPercentages.map((item, index) => (
-                          <div key={index} className="flex items-center">
-                            <div 
-                              className="w-4 h-4 rounded-sm mr-2" 
-                              style={{ backgroundColor: pieChartCategoryData.datasets[0].backgroundColor[index] }}
-                            ></div>
-                            <div className="flex-1 text-sm">
-                              <span className="font-medium">{item.categoria_name}</span>
-                            </div>
-                            <div className="text-sm font-medium">
-                              {item.percentage}%
-                            </div>
-                          </div>
-                        ))}
+                  <div className="w-full mt-6 space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                    {expenseCategoryPercentages.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div
+                            className="w-3 h-3 rounded-full mr-2"
+                            style={{ backgroundColor: pieChartCategoryData.datasets[0].backgroundColor[index] }}
+                          ></div>
+                          <span className="text-sm font-medium text-gray-600 truncate max-w-[120px]">{item.categoria_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-gray-900">{formatCurrency(item.soma_valor)}</span>
+                          <span className="text-xs font-medium text-gray-400">({item.percentage}%)</span>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                ) : (
-                  <div className="h-64 flex items-center justify-center">
-                    <p className="text-gray-500">Nenhuma despesa registrada para este mês</p>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Monthly Chart */}
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Histórico Mensal</h2>
-              <div className="bg-white rounded-lg shadow p-6">
-                {isLoadingChart ? (
-                  <div className="animate-pulse h-64 bg-gray-200 rounded w-full"></div>
-                ) : (
-                  <div className="h-64">
-                    <Bar data={barChartData} options={chartOptions} />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+                </div>
+              ) : (
+                <div className="h-64 flex flex-col items-center justify-center text-center space-y-2">
+                  <PieChart className="h-10 w-10 text-gray-300" />
+                  <p className="text-gray-500 text-sm">Nesta categoria não há dados</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Monthly Chart */}
+          <Card className="border-none shadow-md lg:col-span-1">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold">Fluxo de Caixa</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingChart ? (
+                <div className="animate-pulse h-64 bg-gray-100 rounded-md w-full"></div>
+              ) : (
+                <div className="h-64 pt-4">
+                  <Bar data={barChartData} options={chartOptions} />
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Recent transactions */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Transações Recentes</h2>
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+        {/* Bottom Section: Transactions + Wishlist */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Recent transactions */}
+          <Card className="border-none shadow-md overflow-hidden bg-white lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100 bg-slate-50/50">
+              <div>
+                <CardTitle className="text-xl font-bold">Transações Recentes</CardTitle>
+                <CardDescription>Suas últimas atividades financeiras</CardDescription>
+              </div>
+              <Button variant="ghost" className="text-[#11ab77] hover:text-[#0e9968] font-semibold" asChild>
+                <a href="/transactions">Ver todas</a>
+              </Button>
+            </CardHeader>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-slate-50/50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Descrição
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tipo
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Categoria
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Subcategoria
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Data
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Valor
-                    </th>                  
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ações
-                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Descrição</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Data</th>
+                    <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Valor</th>
+                    <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {isLoadingTransactions ? (
-                    // Loading state
-                    Array.from({ length: 4 }).map((_, index) => (
+                    Array.from({ length: 5 }).map((_, index) => (
                       <tr key={index}>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="animate-pulse h-4 bg-gray-200 rounded w-24"></div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="animate-pulse h-4 bg-gray-200 rounded w-16"></div>
+                          <div className="animate-pulse h-4 bg-gray-200 rounded w-32"></div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="animate-pulse h-4 bg-gray-200 rounded w-20"></div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="animate-pulse h-4 bg-gray-200 rounded w-20"></div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="animate-pulse h-4 bg-gray-200 rounded w-24"></div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">
                           <div className="animate-pulse h-4 bg-gray-200 rounded w-20 ml-auto"></div>
@@ -810,35 +507,23 @@ export default function Dashboard() {
                       </tr>
                     ))
                   ) : transactions.length > 0 ? (
-                    // Transactions data
-                    transactions.map((transaction) => (
-                      <tr key={transaction.id}>
+                    transactions.slice(0, 10).map((transaction) => (
+                      <tr key={transaction.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {transaction.descricao}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {transaction.tipo_name || '-'}
+                          {formatDate(transaction.data, '')}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {transaction.categoria_name || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {transaction.subcategoria_name || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(transaction.data, transaction.hora)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold">
                           <span className={transaction.tipo == "receita" || (transaction.categoria == "investimento" && transaction.valor > 0) ? 'text-green-600' : 'text-red-600'}>
-                            {transaction.tipo == "receita" || (transaction.categoria == "investimento" && transaction.valor > 0) ? '+ ' : '- '}
-                            {formatCurrency(Math.abs(transaction.valor))}
+                            {formatCurrency(transaction.valor)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                          <button 
+                          <button
                             onClick={() => handleEditTransaction(transaction.registro_id)}
                             className="text-gray-400 hover:text-[#11ab77] transition-colors"
-                            title="Editar"
                           >
                             <Edit size={16} />
                           </button>
@@ -846,27 +531,92 @@ export default function Dashboard() {
                       </tr>
                     ))
                   ) : (
-                    // No transactions
                     <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
-                        {searchTerm ? 'Nenhuma transação encontrada para esta busca' : 'Nenhuma transação encontrada'}
+                      <td colSpan={4} className="px-6 py-10 text-center text-sm text-gray-500">
+                        Nenhuma transação encontrada
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
-          </div>
-        </div>
-      </div>
+          </Card>
 
-      {/* Transaction Edit Modal */}
-      <TransactionEditModal 
-        isOpen={isEditModalOpen}
-        onClose={handleCloseModal}
-        transactionId={selectedTransactionId}
-        onSave={handleTransactionSaved}
-      />
+          {/* Wishlist / Priorities */}
+          <Card className="border-none shadow-md overflow-hidden bg-white flex flex-col">
+            <CardHeader className="border-b border-gray-100 bg-slate-50/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-bold flex items-center">
+                    <ListTodo className="mr-2 h-5 w-5 text-[#11ab77]" />
+                    Lista de Desejos
+                  </CardTitle>
+                  <CardDescription>Metas e prioridades de compra</CardDescription>
+                </div>
+                <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
+              </div>
+            </CardHeader>
+            <CardContent className="p-0 flex-1 overflow-auto max-h-[500px] custom-scrollbar">
+              {isLoadingWishlist ? (
+                <div className="p-4 space-y-4">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="flex justify-between items-center animate-pulse">
+                      <div className="space-y-2">
+                        <div className="h-4 bg-gray-100 rounded w-32"></div>
+                        <div className="h-3 bg-gray-50 rounded w-20"></div>
+                      </div>
+                      <div className="h-4 bg-gray-100 rounded w-16"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : wishlist.length > 0 ? (
+                <ul className="divide-y divide-gray-100">
+                  {wishlist.map((item) => (
+                    <li key={item.id} className="p-4 hover:bg-slate-50 transition-colors group">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <div className="flex items-center">
+                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 text-[10px] font-bold text-slate-500 mr-2 group-hover:bg-[#11ab77] group-hover:text-white transition-colors">
+                              {item.prioridade}
+                            </span>
+                            <h4 className="text-sm font-semibold text-gray-900">{item.nome}</h4>
+                          </div>
+                          <p className="text-[10px] text-gray-400 ml-7">
+                            Adicionado em {new Date(item.created_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-bold text-[#11ab77]">
+                            {formatCurrency(item.valor)}
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-48 text-center p-6 grayscale opacity-40">
+                  <Star className="h-10 w-10 mb-2 border-none" />
+                  <p className="text-sm text-gray-500">Sua lista está vazia.<br />Comece a planejar seus sonhos!</p>
+                </div>
+              )}
+            </CardContent>
+            <div className="p-3 bg-slate-50/30 border-t border-gray-100 mt-auto">
+              <p className="text-[10px] text-center text-gray-400 italic">
+                A prioridade ajuda você a focar no que é mais importante.
+              </p>
+            </div>
+          </Card>
+        </div>
+
+        {/* Transaction Edit Modal */}
+        <TransactionEditModal
+          isOpen={isEditModalOpen}
+          onClose={handleCloseModal}
+          transactionId={selectedTransactionId}
+          onSave={handleTransactionSaved}
+        />
+      </div>
     </Layout>
   );
 }

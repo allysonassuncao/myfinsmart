@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Home, 
-  CreditCard, 
-  Settings, 
+import {
+  Home,
+  CreditCard,
+  Settings,
   LogOut,
   DollarSign,
   BarChart2,
@@ -15,49 +15,63 @@ import {
   ChevronRight,
   User,
   Calendar,
-  FileText
+  FileText,
+  Sparkles,
+  PanelLeftClose,
+  Star
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface SidebarProps {
   isMobileOpen: boolean;
   toggleMobileSidebar: () => void;
+  isCollapsed: boolean;
+  toggleCollapse: () => void;
 }
 
 interface MenuItem {
   name: string;
   path: string;
-  icon: React.ReactNode;
+  icon: React.ElementType;
   submenu?: MenuItem[];
 }
 
-export default function Sidebar({ isMobileOpen, toggleMobileSidebar }: SidebarProps) {
+export default function Sidebar({
+  isMobileOpen,
+  toggleMobileSidebar,
+  isCollapsed,
+  toggleCollapse
+}: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const [expandedMenus, setExpandedMenus] = useState<{ [key: string]: boolean }>({});
-  
+
   const menuItems: MenuItem[] = [
-    { name: 'Início', path: '/dashboard', icon: <Home size={20} /> },
-    { name: 'Transações', path: '/transactions', icon: <CreditCard size={20} /> },
-    { name: 'Parcelamentos', path: '/installments', icon: <Receipt size={20} /> },
-    { name: 'Calendário', path: '/calendar', icon: <Calendar size={20} /> },
-    { name: 'Relatório por categoria', path: '/category-report', icon: <BarChart2 size={20} /> },
-    { name: 'Aplicativo', path: '/tokens', icon: <Key size={20} /> },
-    { 
-      name: 'Configurações', 
-      path: '/settings', 
-      icon: <Settings size={20} />,
+    { name: 'Início', path: '/dashboard', icon: Home },
+    { name: 'Transações', path: '/transactions', icon: CreditCard },
+    { name: 'Parcelamentos', path: '/installments', icon: Receipt },
+    { name: 'Calendário', path: '/calendar', icon: Calendar },
+    { name: 'Relatório por categoria', path: '/category-report', icon: BarChart2 },
+    { name: 'Lista de desejos', path: '/wishlist', icon: Star },
+    { name: 'Aplicativo', path: '/tokens', icon: Key },
+    {
+      name: 'Configurações',
+      path: '/settings',
+      icon: Settings,
       submenu: [
-        { name: 'Categorias', path: '/categories', icon: <Tag size={16} /> },
-        { name: 'Subcategorias', path: '/subcategories', icon: <Layers size={16} /> },
-        { name: 'Cartões de crédito', path: '/credit-cards', icon: <CreditCard size={16} /> },
-        { name: 'Termos personalizados', path: '/custom-terms', icon: <FileText size={16} /> },
-        { name: 'Minha conta', path: '/settings', icon: <User size={16} /> },
+        { name: 'Categorias', path: '/categories', icon: Tag },
+        { name: 'Subcategorias', path: '/subcategories', icon: Layers },
+        { name: 'Cartões de crédito', path: '/credit-cards', icon: CreditCard },
+        { name: 'Termos personalizados', path: '/custom-terms', icon: FileText },
+        { name: 'Minha conta', path: '/settings', icon: User },
       ]
     },
   ];
-  
+
   const isActive = (path: string) => {
     return location.pathname === path;
   };
@@ -67,12 +81,15 @@ export default function Sidebar({ isMobileOpen, toggleMobileSidebar }: SidebarPr
   };
 
   const toggleMenu = (menuName: string) => {
-    setExpandedMenus(prev => ({
+    if (isCollapsed) {
+      toggleCollapse();
+    }
+    setExpandedMenus((prev: Record<string, boolean>) => ({
       ...prev,
       [menuName]: !prev[menuName]
     }));
   };
-  
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
@@ -83,113 +100,194 @@ export default function Sidebar({ isMobileOpen, toggleMobileSidebar }: SidebarPr
       toggleMobileSidebar();
     }
   };
-  
+
   return (
     <>
       {isMobileOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+        <div
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden"
           onClick={toggleMobileSidebar}
         />
       )}
-      
-      <div 
-        className={`fixed top-0 left-0 h-full bg-white shadow-lg z-30 transition-transform duration-300 ease-in-out w-64 md:translate-x-0 ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        }`}
+
+      <div
+        className={cn(
+          "fixed top-0 left-0 h-full bg-white border-r border-slate-200 z-50 transition-all duration-300 ease-in-out md:translate-x-0 shadow-2xl md:shadow-none flex flex-col group/sidebar",
+          isMobileOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0",
+          !isMobileOpen && (isCollapsed ? "md:w-20" : "md:w-64")
+        )}
       >
-        <div className="flex items-center p-4 border-b">
-          <div className="bg-[#11ab77] p-2 rounded-lg">
-            <DollarSign className="h-6 w-6 text-white" />
+        <div className={cn(
+          "relative flex items-center p-6 mb-2 transition-all duration-300",
+          isCollapsed && !isMobileOpen ? "p-4 justify-center" : "justify-between"
+        )}>
+          <div className="flex items-center">
+            <div className="bg-gradient-to-br from-[#11ab77] to-[#0d8a5f] p-2.5 rounded-xl shadow-lg shadow-[#11ab77]/20 shrink-0">
+              <DollarSign className="h-6 w-6 text-white" />
+            </div>
+            {(!isCollapsed || isMobileOpen) && (
+              <span className="ml-3 text-2xl font-black tracking-tight text-slate-800 animate-in fade-in slide-in-from-left-2 duration-300">
+                FinSmart
+              </span>
+            )}
           </div>
-          <span className="ml-2 text-xl font-bold">FinSmart</span>
+
+          {!isMobileOpen && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={toggleCollapse}
+              className={cn(
+                "hidden md:flex text-slate-400 hover:text-[#11ab77] hover:bg-slate-50 transition-all duration-300",
+                isCollapsed ? "absolute -right-3 top-8 bg-white border border-slate-200 rounded-full shadow-sm z-50 hover:scale-110" : "ml-2",
+                isCollapsed && "rotate-180"
+              )}
+            >
+              <PanelLeftClose size={14} />
+            </Button>
+          )}
         </div>
-        
-        <nav className="mt-6 px-4">
-          <ul>
+
+        <ScrollArea className="flex-1 px-3">
+          <div className="space-y-2 py-2">
             {menuItems.map((item) => (
-              <li key={item.name} className="mb-2">
+              <div key={item.name}>
                 {item.submenu ? (
-                  <div>
-                    <button
+                  <div className="space-y-1">
+                    <Button
+                      variant="ghost"
                       onClick={() => toggleMenu(item.name)}
-                      className={`flex items-center justify-between w-full p-3 rounded-lg transition-colors ${
-                        isActive(item.path) || isSubmenuActive(item.submenu)
-                          ? 'bg-[#11ab77] text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                      className={cn(
+                        "w-full h-11 px-3 rounded-xl transition-all duration-200 font-semibold group",
+                        isCollapsed && !isMobileOpen ? "justify-center p-0 h-12 w-12 mx-auto" : "justify-between",
+                        (isActive(item.path) || isSubmenuActive(item.submenu))
+                          ? "bg-[#11ab77] text-white hover:bg-[#11ab77]/90 hover:text-white shadow-md shadow-[#11ab77]/10"
+                          : "text-slate-600 hover:bg-slate-100 hover:text-[#11ab77]"
+                      )}
                     >
                       <div className="flex items-center">
-                        <span className="mr-3">{item.icon}</span>
-                        <span>{item.name}</span>
+                        <item.icon className={cn(
+                          "h-5 w-5 shrink-0 transition-all",
+                          (isCollapsed && !isMobileOpen) ? "" : "mr-3",
+                          (isActive(item.path) || isSubmenuActive(item.submenu)) ? "text-white" : "text-slate-400 group-hover:text-[#11ab77]"
+                        )} />
+                        {(!isCollapsed || isMobileOpen) && (
+                          <span className="truncate animate-in fade-in slide-in-from-left-1 duration-200">
+                            {item.name}
+                          </span>
+                        )}
                       </div>
-                      {expandedMenus[item.name] ? (
-                        <ChevronDown size={16} />
-                      ) : (
-                        <ChevronRight size={16} />
+                      {(!isCollapsed || isMobileOpen) && (
+                        <div className="shrink-0 transition-transform duration-200">
+                          {expandedMenus[item.name] ? (
+                            <ChevronDown size={14} className="opacity-40" />
+                          ) : (
+                            <ChevronRight size={14} className="opacity-40" />
+                          )}
+                        </div>
                       )}
-                    </button>
-                    <div className={`mt-2 ml-8 space-y-2 transition-all duration-200 ${
-                      expandedMenus[item.name] ? 'block' : 'hidden'
-                    }`}>
+                    </Button>
+                    <div className={cn(
+                      "overflow-hidden transition-all duration-300",
+                      (isCollapsed && !isMobileOpen) ? "max-h-0" : (
+                        expandedMenus[item.name]
+                          ? "max-h-96 opacity-100 mt-1 pb-1 ml-6 border-l border-slate-100"
+                          : "max-h-0 opacity-0"
+                      )
+                    )}>
                       {item.submenu.map((subItem) => (
                         <Link
                           key={subItem.name}
                           to={subItem.path}
-                          className={`submenu-item flex items-center p-2 rounded-lg transition-colors ${
+                          className={cn(
+                            "submenu-item flex items-center px-4 py-2.5 my-0.5 rounded-xl text-sm font-medium transition-all duration-200",
                             isActive(subItem.path)
-                              ? 'bg-[#e6f7f1] text-[#11ab77]'
-                              : 'text-gray-600 hover:bg-gray-50'
-                          }`}
+                              ? "bg-[#e6f7f1] text-[#11ab77] shadow-sm shadow-[#11ab77]/5"
+                              : "text-slate-500 hover:bg-slate-50 hover:text-[#11ab77]"
+                          )}
                         >
-                          <span className="mr-2">{subItem.icon}</span>
-                          <span className="text-sm">{subItem.name}</span>
+                          <subItem.icon className={cn("mr-2.5 h-4 w-4 shrink-0", isActive(subItem.path) ? "text-[#11ab77]" : "text-slate-400")} />
+                          <span className="truncate">{subItem.name}</span>
                         </Link>
                       ))}
                     </div>
                   </div>
                 ) : (
-                  <Link
-                    to={item.path}
-                    className={`flex items-center p-3 rounded-lg transition-colors ${
+                  <Button
+                    variant="ghost"
+                    asChild
+                    className={cn(
+                      "w-full h-11 px-3 rounded-xl transition-all duration-200 font-semibold group mb-1",
+                      isCollapsed && !isMobileOpen ? "justify-center p-0 h-11 w-11 mx-auto" : "justify-start",
                       isActive(item.path)
-                        ? 'bg-[#11ab77] text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
+                        ? "bg-[#11ab77] text-white hover:bg-[#11ab77]/90 hover:text-white shadow-md shadow-[#11ab77]/10"
+                        : "text-slate-600 hover:bg-slate-100 hover:text-[#11ab77]"
+                    )}
                     onClick={handleSubmenuClick}
                   >
-                    <span className="mr-3">{item.icon}</span>
-                    <span>{item.name}</span>
-                  </Link>
+                    <Link to={item.path} title={isCollapsed && !isMobileOpen ? item.name : undefined}>
+                      <item.icon className={cn(
+                        "h-5 w-5 shrink-0 transition-all",
+                        (isCollapsed && !isMobileOpen) ? "" : "mr-3",
+                        isActive(item.path) ? "text-white" : "text-slate-400 group-hover:text-[#11ab77]"
+                      )} />
+                      {(!isCollapsed || isMobileOpen) && (
+                        <span className="truncate animate-in fade-in slide-in-from-left-1 duration-200">
+                          {item.name}
+                        </span>
+                      )}
+                    </Link>
+                  </Button>
                 )}
-              </li>
+              </div>
             ))}
-            
-            <li className="mb-2">
-              <button
-                onClick={handleSignOut}
-                className="flex items-center p-3 w-full rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
-              >
-                <span className="mr-3"><LogOut size={20} /></span>
-                <span>Sair</span>
-              </button>
-            </li>
-          </ul>
-        </nav>
-        
-        <div className="absolute bottom-4 w-full px-4">
-          <div className="bg-[#e6f7f1] p-4 rounded-lg text-center">
-            <div className="bg-white w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2">
-              <DollarSign className="h-6 w-6 text-[#11ab77]" />
-            </div>
-            <h3 className="font-bold text-[#0e8c61]">FinSmart Anual</h3>
-            <p className="text-xs text-[#0e8c61] mt-1 mb-3">
-              Economize ainda mais com o plano anual: R$ 79,90.
-            </p>
-            <button className="bg-white text-[#11ab77] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#f0faf7] transition-colors">
-              Assinar
-            </button>
           </div>
+        </ScrollArea>
+
+        <div className="p-4 mt-auto border-t border-slate-100 bg-slate-50/50">
+          <div className={cn(
+            "bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl relative overflow-hidden group/pro transition-all duration-300",
+            isCollapsed && !isMobileOpen ? "h-12 w-12 mx-auto flex items-center justify-center p-0" : "p-5"
+          )}>
+            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover/pro:scale-125 transition-transform duration-500">
+              <Sparkles size={64} className="text-white" />
+            </div>
+
+            {isCollapsed && !isMobileOpen ? (
+              <Sparkles className="text-[#11ab77] animate-pulse" size={24} />
+            ) : (
+              <div className="animate-in fade-in zoom-in-95 duration-300">
+                <h3 className="font-bold text-white text-sm relative z-10 flex items-center">
+                  FinSmart Pro
+                  <span className="ml-2 bg-[#11ab77] text-[10px] px-1.5 py-0.5 rounded-full uppercase tracking-wider">Novo</span>
+                </h3>
+                <p className="text-[11px] text-slate-300 mt-1.5 mb-4 relative z-10 leading-relaxed text-balance">
+                  Relatórios avançados por <strong>R$ 79,90/ano</strong>.
+                </p>
+                <Button size="sm" className="w-full h-8 bg-[#11ab77] hover:bg-[#0e9968] text-white text-[10px] md:text-xs font-bold rounded-lg relative z-10 transition-transform active:scale-95">
+                  Assinar Agora
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <Button
+            variant="ghost"
+            onClick={handleSignOut}
+            className={cn(
+              "w-full mt-4 h-11 px-3 text-slate-500 hover:bg-rose-50 hover:text-rose-600 rounded-xl transition-all duration-200 font-semibold group",
+              isCollapsed && !isMobileOpen ? "justify-center p-0 h-11 w-11 mx-auto" : "justify-start"
+            )}
+            title={isCollapsed && !isMobileOpen ? "Sair do App" : undefined}
+          >
+            <LogOut size={20} className={cn(
+              "shrink-0 group-hover:rotate-12 transition-transform",
+              (isCollapsed && !isMobileOpen) ? "" : "mr-3"
+            )} />
+            {(!isCollapsed || isMobileOpen) && (
+              <span className="truncate">Sair do App</span>
+            )}
+          </Button>
         </div>
       </div>
     </>
