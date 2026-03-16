@@ -18,6 +18,7 @@ import TermsOfUse from '@/pages/TermsOfUse';
 import CustomTerms from '@/pages/CustomTerms';
 import Wishlist from '@/pages/Wishlist';
 import { Toaster } from '@/components/ui/sonner';
+import FinanceChat from '@/components/FinanceChat';
 
 function App() {
   return (
@@ -128,6 +129,7 @@ function App() {
         </Routes>
       </Router>
       <Toaster position="top-right" richColors />
+      <FinanceChat />
     </AuthProvider>
   );
 }
