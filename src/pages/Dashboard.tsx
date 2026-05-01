@@ -130,44 +130,35 @@ export default function Dashboard() {
   };
 
   // Prepare chart data for Chart.js
-  const lineChartData = {
+  const barChartData = {
     labels: chartData.map(d => d.month),
     datasets: [
       {
         label: 'Receitas',
         data: chartData.map(d => d.receita),
-        borderColor: '#10b981', // Emerald 500
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        fill: true,
-        tension: 0.4,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        pointBackgroundColor: '#10b981',
-        borderWidth: 3,
+        backgroundColor: 'rgba(16, 185, 129, 0.85)', // Emerald 500
+        hoverBackgroundColor: 'rgba(16, 185, 129, 1)',
+        borderRadius: 2,
+        borderSkipped: false,
+        barThickness: 24,
       },
       {
         label: 'Despesas',
         data: chartData.map(d => Math.abs(d.gasto)),
-        borderColor: '#f43f5e', // Rose 500
-        backgroundColor: 'rgba(244, 63, 94, 0.1)',
-        fill: true,
-        tension: 0.4,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        pointBackgroundColor: '#f43f5e',
-        borderWidth: 3,
+        backgroundColor: 'rgba(244, 63, 94, 0.85)', // Rose 500
+        hoverBackgroundColor: 'rgba(244, 63, 94, 1)',
+        borderRadius: 2,
+        borderSkipped: false,
+        barThickness: 24,
       },
       {
         label: 'Parcelamentos',
         data: chartData.map(d => Math.abs(d.valor_cartoes)),
-        borderColor: '#f59e0b', // Amber 500
-        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-        fill: true,
-        tension: 0.4,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        pointBackgroundColor: '#f59e0b',
-        borderWidth: 3,
+        backgroundColor: 'rgba(245, 158, 11, 0.85)', // Amber 500
+        hoverBackgroundColor: 'rgba(245, 158, 11, 1)',
+        borderRadius: 2,
+        borderSkipped: false,
+        barThickness: 24,
       }
     ],
   };
@@ -378,11 +369,6 @@ export default function Dashboard() {
     <Layout title="Início">
       <div className="space-y-8 animate-in fade-in duration-500">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900">Visão Geral</h2>
-            <p className="text-gray-500">Acompanhe seu desempenho financeiro em tempo real.</p>
-          </div>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="w-[180px] justify-between border-gray-200 shadow-sm bg-white">
@@ -406,7 +392,7 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {/* Balance card */}
-          <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-slate-50">
+          <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-slate-50 ring-gray-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-semibold text-gray-600">Saldo Total</CardTitle>
               <Wallet className="h-5 w-5 text-[#11ab77]" />
@@ -424,7 +410,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Income card */}
-          <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-slate-50">
+          <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-slate-50 ring-gray-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-semibold text-gray-600">Receitas</CardTitle>
               <TrendingUp className="h-5 w-5 text-emerald-500" />
@@ -444,7 +430,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Expenses card */}
-          <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-slate-50">
+          <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-slate-50 ring-gray-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-semibold text-gray-600">Despesas</CardTitle>
               <TrendingDown className="h-5 w-5 text-rose-500" />
@@ -471,7 +457,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Investments card */}
-          <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-slate-50">
+          <Card className="border-none shadow-md hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-slate-50 ring-gray-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-semibold text-gray-600">Investimentos</CardTitle>
               <PiggyBank className="h-5 w-5 text-sky-500" />
@@ -490,9 +476,26 @@ export default function Dashboard() {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+          {/* Monthly Chart */}
+          <Card className="border-none shadow-md lg:col-span-1 ring-gray-200">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold">Fluxo de Caixa</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingChart ? (
+                <div className="animate-pulse h-64 bg-gray-100 rounded-md w-full"></div>
+              ) : (
+                <div className="h-64 pt-4">
+                  <Bar data={barChartData} options={chartOptions} />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Expense by Type Pie Chart */}
-          <Card className="border-none shadow-md overflow-hidden">
+          <Card className="border-none shadow-md overflow-hidden ring-gray-200">
             <CardHeader>
               <CardTitle className="text-xl font-bold">Despesas por Tipo</CardTitle>
             </CardHeader>
@@ -538,7 +541,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Expense by Category Pie Chart */}
-          <Card className="border-none shadow-md overflow-hidden">
+          <Card className="border-none shadow-md overflow-hidden ring-gray-200">
             <CardHeader>
               <CardTitle className="text-xl font-bold">Por Categoria</CardTitle>
             </CardHeader>
@@ -582,30 +585,14 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
-
-          {/* Monthly Chart */}
-          <Card className="border-none shadow-md lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold">Fluxo de Caixa</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingChart ? (
-                <div className="animate-pulse h-64 bg-gray-100 rounded-md w-full"></div>
-              ) : (
-                <div className="h-64 pt-4">
-                  <Line data={lineChartData} options={chartOptions} />
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
 
         {/* Recent transactions */}
         {/* Bottom Section: Transactions + Wishlist */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Recent transactions */}
-          <Card className="border-none shadow-md overflow-hidden bg-white lg:col-span-2">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100 bg-slate-50/50">
+          <Card className="border-none shadow-md overflow-hidden bg-white ring-gray-200 lg:col-span-2 gap-0">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100 pb-3">
               <div>
                 <CardTitle className="text-xl font-bold">Transações Recentes</CardTitle>
                 <CardDescription>Suas últimas atividades financeiras</CardDescription>
@@ -679,8 +666,8 @@ export default function Dashboard() {
           </Card>
 
           {/* Wishlist / Priorities */}
-          <Card className="border-none shadow-md overflow-hidden bg-white flex flex-col">
-            <CardHeader className="border-b border-gray-100 bg-slate-50/50">
+          <Card className="border-none shadow-md overflow-hidden bg-white flex flex-col ring-gray-200 gap-0">
+            <CardHeader className="border-b border-gray-100 pb-3">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-xl font-bold flex items-center">
