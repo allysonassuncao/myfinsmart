@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Login from '@/pages/Login';
@@ -28,12 +28,23 @@ import { supabase } from '@/lib/supabase';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 function HomeRoute() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const isIOS = Capacitor.getPlatform() === 'ios';
 
-  if (isIOS && !user) {
-    return <Login />;
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#11ab77]"></div>
+      </div>
+    );
   }
+
+  if (isIOS) {
+    if (!user) return <Login />;
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (user) return <Navigate to="/dashboard" replace />;
   return <LandingPage />;
 }
 
