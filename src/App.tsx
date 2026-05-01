@@ -18,7 +18,6 @@ import TermsOfUse from '@/pages/TermsOfUse';
 import CustomTerms from '@/pages/CustomTerms';
 import Wishlist from '@/pages/Wishlist';
 import { Toaster } from '@/components/ui/sonner';
-import FinanceChat from '@/components/FinanceChat';
 import { Capacitor } from '@capacitor/core';
 import { useAuth } from '@/context/AuthContext';
 import { App as CapApp } from '@capacitor/app';
@@ -231,7 +230,6 @@ function App() {
         <AppContent />
       </Router>
       <Toaster position="top-right" richColors />
-      <FinanceChat />
     </AuthProvider>
   );
 }
