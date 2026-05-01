@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
@@ -13,6 +13,7 @@ interface GroupedInstallment {
   tipo: string;
   categoria: string;
   subcategoria: string;
+  totalValue: number;
   monthlyValues: { [key: string]: number };
 }
 
@@ -54,14 +55,17 @@ const formatCurrency = (value: number | undefined) => {
 // Components
 const LoadingRow = ({ columnsCount }: { columnsCount: number }) => (
   <tr>
-    <td className="px-6 py-4 whitespace-nowrap">
+    <td className="px-6 py-4 whitespace-nowrap sticky left-0 bg-white z-10">
       <div className="animate-pulse h-4 bg-gray-200 rounded w-32"></div>
     </td>
-    <td className="px-6 py-4 whitespace-nowrap">
+    <td className="px-6 py-4 whitespace-nowrap sticky left-[200px] bg-white z-10">
       <div className="animate-pulse h-4 bg-gray-200 rounded w-24"></div>
     </td>
-    <td className="px-6 py-4 whitespace-nowrap">
+    <td className="px-6 py-4 whitespace-nowrap sticky left-[350px] bg-white z-10">
       <div className="animate-pulse h-4 bg-gray-200 rounded w-16"></div>
+    </td>
+    <td className="px-6 py-4 whitespace-nowrap sticky left-[430px] bg-white z-10">
+      <div className="animate-pulse h-4 bg-gray-200 rounded w-20"></div>
     </td>
     <td className="px-6 py-4 whitespace-nowrap">
       <div className="animate-pulse h-4 bg-gray-200 rounded w-24"></div>
@@ -331,6 +335,7 @@ function Installments() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Queries
   const { data: records = [], isLoading } = useInstallments(user?.id, searchTerm);
@@ -362,6 +367,8 @@ function Installments() {
       return () => clearTimeout(timer);
     }
   }, [success]);
+
+
 
   // Derived data with useMemo
   const { monthColumns, currentMonth, groupedRecords, monthlyTotals } = useMemo(() => {
@@ -409,6 +416,7 @@ function Installments() {
           tipo: record.tipo,
           categoria: record.categoria,
           subcategoria: record.subcategoria,
+          totalValue: 0,
           monthlyValues: {}
         };
       }
@@ -417,6 +425,7 @@ function Installments() {
         const [year, month] = record.data_pagamento.split('-');
         const mKey = `${month}/${year}`;
         groupedMap[key].monthlyValues[mKey] = (groupedMap[key].monthlyValues[mKey] || 0) + record.valor_por_parcela;
+        groupedMap[key].totalValue += record.valor_por_parcela;
         totals[mKey] = (totals[mKey] || 0) + record.valor_por_parcela;
       }
     });
@@ -428,6 +437,32 @@ function Installments() {
       monthlyTotals: totals
     };
   }, [records]);
+
+  // Auto-scroll to current month
+  useEffect(() => {
+    if (!isLoading && monthColumns.length > 0) {
+      const timer = setTimeout(() => {
+        const element = document.getElementById('current-month-col');
+        const container = scrollContainerRef.current;
+        if (element && container) {
+          const containerWidth = container.offsetWidth;
+          const elementLeft = element.offsetLeft;
+          const elementWidth = element.offsetWidth;
+          const fixedOffset = 530; // Descrição (200) + Cartão (150) + Parcelas (80) + Total (100)
+
+          const elementMid = elementLeft + elementWidth / 2;
+          const visibleCenter = fixedOffset + (containerWidth - fixedOffset) / 2;
+          const targetScroll = elementMid - visibleCenter;
+
+          container.scrollTo({
+            left: Math.max(0, targetScroll),
+            behavior: 'smooth'
+          });
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, monthColumns, currentMonth]);
 
   // Filtered subcategories for modal
   const filteredSubcategorias = useMemo(() => {
@@ -575,18 +610,21 @@ function Installments() {
 
         {/* Main Table area */}
         <div className="bg-white rounded-lg shadow-md flex flex-col flex-1 min-h-0 overflow-hidden border border-gray-100">
-          <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-gray-200">
+          <div ref={scrollContainerRef} className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-gray-200">
             <table className="min-w-full divide-y divide-gray-200 border-separate border-spacing-0">
               <thead className="bg-gray-50 sticky top-0 z-20 shadow-sm">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[200px]">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[200px] sticky left-0 z-30">
                     Descrição
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[150px]">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[150px] sticky left-[200px] z-30">
                     Cartão
                   </th>
-                  <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[80px]">
+                  <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[80px] sticky left-[350px] z-30">
                     Parcelas
+                  </th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[100px] sticky left-[430px] z-30">
+                    Total
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[120px]">
                     Tipo
@@ -600,6 +638,7 @@ function Installments() {
                   {monthColumns.map(month => (
                     <th
                       key={month}
+                      id={month === currentMonth ? 'current-month-col' : undefined}
                       className={`px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[120px] ${month === currentMonth ? 'bg-[#f0f9f6] text-[#11ab77]' : ''
                         }`}
                     >
@@ -620,14 +659,17 @@ function Installments() {
                   <>
                     {groupedRecords.map((record, index) => (
                       <tr key={index} className="hover:bg-gray-50 transition-colors group">
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900 border-r border-gray-50 max-w-[200px] truncate" title={record.descricao}>
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900 border-r border-gray-50 max-w-[200px] truncate sticky left-0 bg-white z-10" title={record.descricao}>
                           {record.descricao}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 sticky left-[200px] bg-white z-10">
                           {record.cardName}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 sticky left-[350px] bg-white z-10">
                           <span className="bg-gray-100 px-2 py-1 rounded text-xs">{record.parcelas}x</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900 sticky left-[430px] bg-white z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                          {formatCurrency(record.totalValue)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 capitalize">
                           {record.tipo || '-'}
@@ -660,7 +702,11 @@ function Installments() {
                     ))}
                     {/* Summary Row */}
                     <tr className="bg-gray-50 font-bold sticky bottom-0 z-10 border-t-2 border-gray-200">
-                      <td colSpan={6} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 uppercase tracking-wider">
+                      <td className="px-6 py-4 sticky left-0 bg-gray-50 z-20"></td>
+                      <td className="px-6 py-4 sticky left-[200px] bg-gray-50 z-20"></td>
+                      <td className="px-6 py-4 sticky left-[350px] bg-gray-50 z-20"></td>
+                      <td className="px-6 py-4 sticky left-[430px] bg-gray-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]"></td>
+                      <td colSpan={3} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 uppercase tracking-wider">
                         Total Geral das Parcelas
                       </td>
                       {monthColumns.map(month => (
@@ -676,7 +722,7 @@ function Installments() {
                     </tr>
                   </>
                 ) : (
-                  <NoDataRow searchTerm={searchTerm} colSpan={7 + monthColumns.length} />
+                  <NoDataRow searchTerm={searchTerm} colSpan={8 + monthColumns.length} />
                 )}
               </tbody>
             </table>

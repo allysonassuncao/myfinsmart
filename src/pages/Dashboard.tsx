@@ -13,16 +13,19 @@ import {
   Star,
   ListTodo
 } from 'lucide-react';
-import { Bar, Doughnut } from 'react-chartjs-2';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   BarElement,
+  PointElement,
+  LineElement,
   Title,
   Tooltip,
   Legend,
-  ArcElement
+  ArcElement,
+  Filler
 } from 'chart.js';
 import Layout from '@/components/Layout';
 import TransactionEditModal from '@/components/TransactionEditModal';
@@ -49,10 +52,13 @@ ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
+  PointElement,
+  LineElement,
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  Filler
 );
 
 export default function Dashboard() {
@@ -124,52 +130,68 @@ export default function Dashboard() {
   };
 
   // Prepare chart data for Chart.js
-  const barChartData = {
+  const lineChartData = {
     labels: chartData.map(d => d.month),
     datasets: [
       {
         label: 'Receitas',
         data: chartData.map(d => d.receita),
-        backgroundColor: 'rgba(22, 163, 74, 0.8)',
-        borderColor: 'rgba(22, 163, 74, 1)',
-        borderWidth: 1,
+        borderColor: '#10b981', // Emerald 500
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: '#10b981',
+        borderWidth: 3,
       },
       {
         label: 'Despesas',
         data: chartData.map(d => Math.abs(d.gasto)),
-        backgroundColor: 'rgba(220, 38, 38, 0.8)',
-        borderColor: 'rgba(220, 38, 38, 1)',
-        borderWidth: 1,
+        borderColor: '#f43f5e', // Rose 500
+        backgroundColor: 'rgba(244, 63, 94, 0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: '#f43f5e',
+        borderWidth: 3,
       },
       {
         label: 'Parcelamentos',
         data: chartData.map(d => Math.abs(d.valor_cartoes)),
-        backgroundColor: 'rgba(249, 115, 22, 0.8)', // Cor laranja para parcelamentos
-        borderColor: 'rgba(249, 115, 22, 1)',
-        borderWidth: 1,
+        borderColor: '#f59e0b', // Amber 500
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: '#f59e0b',
+        borderWidth: 3,
       }
     ],
   };
 
-  // Generate pastel colors for pie chart
-  const generatePastelColors = (count: number) => {
-    const colors = [
-      'rgba(221, 182, 242, 1)',  // Pastel purple
-      'rgba(155, 140, 245, 1)',  // Pastel blue-purple
-      'rgba(69, 179, 224, 1)',   // Pastel blue
-      'rgba(144, 224, 186, 1)',  // Pastel green
-      'rgba(255, 241, 118, 1)'   // Pastel yellow
+  // Modern vibrant colors for charts
+  const generateModernColors = (count: number) => {
+    const palette = [
+      '#6366f1', // Indigo 500
+      '#8b5cf6', // Violet 500
+      '#ec4899', // Pink 500
+      '#f43f5e', // Rose 500
+      '#f97316', // Orange 500
+      '#f59e0b', // Amber 500
+      '#10b981', // Emerald 500
+      '#06b6d4', // Cyan 500
+      '#3b82f6', // Blue 500
+      '#64748b', // Slate 500
     ];
 
-    // If we need more colors than we have defined, generate them
-    if (count > colors.length) {
-      for (let i = colors.length; i < count; i++) {
-        const hue = (i * 137) % 360; // Use golden ratio to spread colors
-        colors.push(`hsla(${hue}, 70%, 80%, 1)`);
-      }
+    const colors = [];
+    for (let i = 0; i < count; i++) {
+      colors.push(palette[i % palette.length]);
     }
-
-    return colors.slice(0, count);
+    return colors;
   };
 
   const expenseTypePercentages = dataToPercentages(expenseByTypeData);
@@ -189,11 +211,11 @@ export default function Dashboard() {
     datasets: [
       {
         data: expenseByTypeData.map(d => Math.abs(d.soma_valor)),
-        backgroundColor: generatePastelColors(expenseByTypeData.length),
+        backgroundColor: generateModernColors(expenseByTypeData.length),
         borderColor: 'white',
-        borderWidth: 2,
-        hoverOffset: 15,
-        cutout: '60%'
+        borderWidth: 3,
+        hoverOffset: 12,
+        cutout: '75%'
       },
     ],
   };
@@ -204,11 +226,11 @@ export default function Dashboard() {
     datasets: [
       {
         data: expenseByCategoryData.map(d => Math.abs(d.soma_valor)),
-        backgroundColor: generatePastelColors(expenseByCategoryData.length),
+        backgroundColor: generateModernColors(expenseByCategoryData.length),
         borderColor: 'white',
-        borderWidth: 2,
-        hoverOffset: 15,
-        cutout: '60%'
+        borderWidth: 3,
+        hoverOffset: 12,
+        cutout: '75%'
       },
     ],
   };
@@ -216,14 +238,101 @@ export default function Dashboard() {
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: {
+      mode: 'index' as const,
+      intersect: false,
+    },
     plugins: {
       legend: {
         position: 'top' as const,
+        align: 'end' as const,
+        labels: {
+          usePointStyle: true,
+          pointStyle: 'circle',
+          padding: 20,
+          font: {
+            family: "'Inter', sans-serif",
+            size: 12,
+            weight: '500'
+          },
+          color: '#64748b'
+        }
       },
+      tooltip: {
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        titleColor: '#1e293b',
+        bodyColor: '#475569',
+        borderColor: '#f1f5f9',
+        borderWidth: 1,
+        padding: 12,
+        boxPadding: 6,
+        usePointStyle: true,
+        cornerRadius: 8,
+        titleFont: {
+          family: "'Inter', sans-serif",
+          size: 13,
+          weight: 'bold'
+        },
+        bodyFont: {
+          family: "'Inter', sans-serif",
+          size: 12
+        },
+        callbacks: {
+          label: function (context: any) {
+            let label = context.dataset.label || '';
+            if (label) {
+              label += ': ';
+            }
+            if (context.parsed.y !== null) {
+              label += formatCurrency(context.parsed.y);
+            }
+            return label;
+          }
+        }
+      }
     },
     scales: {
+      x: {
+        grid: {
+          display: false,
+        },
+        ticks: {
+          font: {
+            family: "'Inter', sans-serif",
+            size: 11,
+            weight: '500'
+          },
+          color: '#94a3b8',
+          padding: 10
+        }
+      },
       y: {
         beginAtZero: true,
+        grid: {
+          color: 'rgba(241, 245, 249, 0.6)',
+          drawBorder: false,
+        },
+        border: {
+          display: false,
+          dash: [6, 6]
+        },
+        ticks: {
+          font: {
+            family: "'Inter', sans-serif",
+            size: 10,
+            weight: '500'
+          },
+          color: '#94a3b8',
+          padding: 12,
+          stepSize: 1000,
+          callback: function (value: any) {
+            if (value === 0) return '0';
+            if (value >= 1000) {
+              return 'R$ ' + (value / 1000) + 'k';
+            }
+            return 'R$ ' + value;
+          }
+        }
       },
     },
   };
@@ -231,11 +340,21 @@ export default function Dashboard() {
   const pieChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    cutout: '75%',
     plugins: {
       legend: {
         display: false
       },
       tooltip: {
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        titleColor: '#1e293b',
+        bodyColor: '#475569',
+        borderColor: '#f1f5f9',
+        borderWidth: 1,
+        padding: 12,
+        boxPadding: 6,
+        usePointStyle: true,
+        cornerRadius: 8,
         callbacks: {
           label: function (context: any) {
             const label = context.label || '';
@@ -247,7 +366,12 @@ export default function Dashboard() {
         }
       }
     },
-    cutout: '60%'
+    animation: {
+      animateRotate: true,
+      animateScale: true,
+      duration: 1000,
+      easing: 'easeOutQuart' as const
+    }
   };
 
   return (
@@ -377,22 +501,28 @@ export default function Dashboard() {
                 <div className="animate-pulse h-64 bg-gray-100 rounded-md w-full"></div>
               ) : expenseByTypeData.length > 0 ? (
                 <div className="flex flex-col items-center">
-                  <div className="w-full h-48 relative">
+                  <div className="w-full h-56 relative flex items-center justify-center">
                     <Doughnut data={pieChartTypeData} options={pieChartOptions} />
+                    <div className="absolute flex flex-col items-center justify-center">
+                      <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Total</span>
+                      <span className="text-lg font-extrabold text-slate-800">
+                        {formatCurrency(expenseByTypeData.reduce((sum, item) => sum + Math.abs(item.soma_valor), 0))}
+                      </span>
+                    </div>
                   </div>
-                  <div className="w-full mt-6 space-y-2">
+                  <div className="w-full mt-6 space-y-3 px-2">
                     {expenseTypePercentages.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between">
+                      <div key={index} className="flex items-center justify-between group cursor-default">
                         <div className="flex items-center">
                           <div
-                            className="w-3 h-3 rounded-full mr-2"
+                            className="w-2.5 h-2.5 rounded-full mr-3 shadow-sm transition-transform group-hover:scale-125"
                             style={{ backgroundColor: pieChartTypeData.datasets[0].backgroundColor[index] }}
                           ></div>
-                          <span className="text-sm font-medium text-gray-600 truncate max-w-[120px]">{item.tipo_name}</span>
+                          <span className="text-sm font-semibold text-slate-600 group-hover:text-slate-900 transition-colors">{item.tipo_name}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-gray-900">{formatCurrency(item.soma_valor)}</span>
-                          <span className="text-xs font-medium text-gray-400">({item.percentage}%)</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-bold text-slate-800">{formatCurrency(item.soma_valor)}</span>
+                          <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">{item.percentage}%</span>
                         </div>
                       </div>
                     ))}
@@ -417,22 +547,28 @@ export default function Dashboard() {
                 <div className="animate-pulse h-64 bg-gray-100 rounded-md w-full"></div>
               ) : expenseByCategoryData.length > 0 ? (
                 <div className="flex flex-col items-center">
-                  <div className="w-full h-48 relative">
+                  <div className="w-full h-56 relative flex items-center justify-center">
                     <Doughnut data={pieChartCategoryData} options={pieChartOptions} />
+                    <div className="absolute flex flex-col items-center justify-center">
+                      <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Categorias</span>
+                      <span className="text-lg font-extrabold text-slate-800">
+                        {expenseByCategoryData.length}
+                      </span>
+                    </div>
                   </div>
-                  <div className="w-full mt-6 space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="w-full mt-6 space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar px-2">
                     {expenseCategoryPercentages.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between">
+                      <div key={index} className="flex items-center justify-between group cursor-default">
                         <div className="flex items-center">
                           <div
-                            className="w-3 h-3 rounded-full mr-2"
+                            className="w-2.5 h-2.5 rounded-full mr-3 shadow-sm transition-transform group-hover:scale-125"
                             style={{ backgroundColor: pieChartCategoryData.datasets[0].backgroundColor[index] }}
                           ></div>
-                          <span className="text-sm font-medium text-gray-600 truncate max-w-[120px]">{item.categoria_name}</span>
+                          <span className="text-sm font-semibold text-slate-600 group-hover:text-slate-900 transition-colors">{item.categoria_name}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-gray-900">{formatCurrency(item.soma_valor)}</span>
-                          <span className="text-xs font-medium text-gray-400">({item.percentage}%)</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-bold text-slate-800">{formatCurrency(item.soma_valor)}</span>
+                          <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">{item.percentage}%</span>
                         </div>
                       </div>
                     ))}
@@ -457,7 +593,7 @@ export default function Dashboard() {
                 <div className="animate-pulse h-64 bg-gray-100 rounded-md w-full"></div>
               ) : (
                 <div className="h-64 pt-4">
-                  <Bar data={barChartData} options={chartOptions} />
+                  <Line data={lineChartData} options={chartOptions} />
                 </div>
               )}
             </CardContent>

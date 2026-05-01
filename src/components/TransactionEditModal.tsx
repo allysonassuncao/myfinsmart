@@ -86,7 +86,12 @@ export default function TransactionEditModal({
 
   // Update valorInput when transaction.valor changes
   useEffect(() => {
-    setValorInput(Math.abs(transaction.valor).toString());
+    // Sincroniza o input com o valor apenas se a representação numérica for diferente,
+    // permitindo a digitação de sinais negativos e pontos decimais sem interrupção.
+    const currentNumericValue = parseFloat(valorInput) || 0;
+    if (currentNumericValue !== transaction.valor) {
+      setValorInput(transaction.valor.toString());
+    }
   }, [transaction.valor]);
 
   // Filter subcategorias based on selected tipo and categoria
@@ -215,8 +220,8 @@ export default function TransactionEditModal({
   const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
     
-    // Allow digits and decimal point
-    if (/^[0-9]*\.?[0-9]*$/.test(input) || input === '') {
+    // Allow digits, decimal point and negative sign
+    if (/^-?[0-9]*\.?[0-9]*$/.test(input) || input === '') {
       setValorInput(input);
       
       // Update the transaction value
@@ -515,7 +520,7 @@ export default function TransactionEditModal({
                 />
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Use o botão para alternar entre valores positivos e negativos
+                Você pode incluir valores negativos diretamente no campo
               </p>
             </div>
             
