@@ -70,7 +70,7 @@ export default function Login() {
 
       {/* Right side with login form */}
       <div className="flex items-center justify-center p-8 md:w-1/2">
-        <Card className="w-full max-w-md border-none shadow-2xl bg-white/80 backdrop-blur-md">
+        <Card className="w-full max-w-md ">
           <CardHeader className="space-y-1">
             <CardTitle className="text-3xl font-bold text-center tracking-tight text-gray-900">Boas-vindas!</CardTitle>
             <CardDescription className="text-center text-gray-500 text-base">
