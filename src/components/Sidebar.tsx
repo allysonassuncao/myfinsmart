@@ -112,7 +112,7 @@ export default function Sidebar({
 
       <div
         className={cn(
-          "fixed top-0 left-0 h-full bg-white border-r border-slate-200 z-50 transition-all duration-300 ease-in-out md:translate-x-0 shadow-2xl md:shadow-none flex flex-col group/sidebar",
+          "fixed top-0 left-0 h-full bg-white border-r border-slate-200 z-50 transition-all duration-300 ease-in-out md:translate-x-0 shadow-2xl md:shadow-none flex flex-col group/sidebar pt-10 md:pt-0",
           isMobileOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0",
           !isMobileOpen && (isCollapsed ? "md:w-20" : "md:w-64")
         )}

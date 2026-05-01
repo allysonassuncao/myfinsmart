@@ -13,7 +13,9 @@
     "build:ios": "npm run build && npx cap sync"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.0",
     "@capacitor/ios": "^8.3.1",
+    "@capacitor/local-notifications": "^8.0.2",
     "@fontsource-variable/geist": "^5.2.8",
     "@hello-pangea/dnd": "^18.0.1",
     "@supabase/supabase-js": "^2.39.7",

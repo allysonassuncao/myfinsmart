@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Edit, Plus, Filter, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -12,6 +13,7 @@ export default function Transactions() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -59,6 +61,15 @@ export default function Transactions() {
 
   const transactions = transactionInfo.data;
   const totalPages = Math.ceil(transactionInfo.count / itemsPerPage);
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'new') {
+      handleNewTransaction();
+      // Clear the param so it doesn't reopen on every render
+      searchParams.delete('action');
+      setSearchParams(searchParams);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     // Filter subcategorias based on selected tipo and categoria in filter modal

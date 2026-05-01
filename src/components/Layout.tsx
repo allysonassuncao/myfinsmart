@@ -48,7 +48,7 @@ export default function Layout({ children, title }: LayoutProps) {
         )}
       >
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-30 flex-shrink-0">
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-30 flex-shrink-0 pt-10 md:pt-0">
           <div className="px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center bg-white/80 backdrop-blur-md">
             <div className="flex items-center">
               <button

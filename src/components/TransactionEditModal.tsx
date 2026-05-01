@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
 
 interface TransactionEditModalProps {
   isOpen: boolean;
@@ -74,8 +76,24 @@ export default function TransactionEditModal({
       } else {
         resetForm();
       }
+      
+      // Request notification permissions when modal opens
+      if (Capacitor.isNativePlatform()) {
+        requestNotificationPermissions();
+      }
     }
   }, [isOpen, transactionId]);
+
+  const requestNotificationPermissions = async () => {
+    try {
+      const permissionStatus = await LocalNotifications.checkPermissions();
+      if (permissionStatus.display !== 'granted') {
+        await LocalNotifications.requestPermissions();
+      }
+    } catch (err) {
+      console.error('Error checking/requesting notification permissions:', err);
+    }
+  };
 
   // This effect runs when both options and transaction data are loaded
   useEffect(() => {

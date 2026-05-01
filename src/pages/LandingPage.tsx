@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  DollarSign, 
-  ChevronRight, 
-  BarChart2, 
-  PieChart, 
-  CreditCard, 
-  Shield, 
-  Check, 
-  Menu, 
+import {
+  DollarSign,
+  ChevronRight,
+  BarChart2,
+  PieChart,
+  CreditCard,
+  Shield,
+  Check,
+  Menu,
   X,
   ArrowRight
 } from 'lucide-react';
 
 export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -23,7 +23,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
-      <nav className="bg-white border-b border-gray-100">
+      <nav className="bg-white border-b border-gray-100 pt-10 md:pt-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
@@ -34,7 +34,7 @@ export default function LandingPage() {
                 <span className="ml-2 text-xl font-bold">FinSmart</span>
               </div>
             </div>
-            
+
             {/* Desktop menu */}
             <div className="hidden md:flex items-center space-x-8">
               <a href="#features" className="text-gray-700 hover:text-[#11ab77] transition-colors">
@@ -53,7 +53,7 @@ export default function LandingPage() {
                 Entrar
               </Link>
             </div>
-            
+
             {/* Mobile menu button */}
             <div className="flex items-center md:hidden">
               <button
@@ -65,41 +65,41 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-        
+
         {/* Mobile menu */}
         {isMenuOpen && (
           <div className="md:hidden bg-white border-b border-gray-100">
             <div className="px-2 pt-2 pb-3 space-y-1">
-              <a 
-                href="#features" 
+              <a
+                href="#features"
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#11ab77] hover:bg-gray-50"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Funcionalidades
               </a>
-              <a 
-                href="#benefits" 
+              <a
+                href="#benefits"
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#11ab77] hover:bg-gray-50"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Benefícios
               </a>
-              <a 
-                href="#pricing" 
+              <a
+                href="#pricing"
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#11ab77] hover:bg-gray-50"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Planos
               </a>
-              <a 
-                href="#testimonials" 
+              <a
+                href="#testimonials"
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#11ab77] hover:bg-gray-50"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Depoimentos
               </a>
-              <Link 
-                to="/login" 
+              <Link
+                to="/login"
                 className="block px-3 py-2 rounded-md text-base font-medium bg-[#11ab77] text-white hover:bg-[#0e9968]"
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -122,14 +122,14 @@ export default function LandingPage() {
                 O FinSmart é <strong className="text-[#11ab77]">seu assistente financeiro pessoal com inteligência artificial</strong> que ajuda a categorizar seus gastos, organizar suas finanças e alcançar seus objetivos financeiros com facilidade.
               </p>
               <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-                <a 
+                <a
                   href="#pricing"
                   className="bg-[#11ab77] text-white px-6 py-3 rounded-md hover:bg-[#0e9968] transition-colors text-center"
                 >
                   Conhecer planos
                 </a>
-                <a 
-                  href="#features" 
+                <a
+                  href="#features"
                   className="bg-white text-[#11ab77] border border-[#11ab77] px-6 py-3 rounded-md hover:bg-[#f0faf7] transition-colors text-center flex items-center justify-center"
                 >
                   Saiba mais <ChevronRight size={16} className="ml-1" />
@@ -137,10 +137,10 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="md:w-1/2 flex justify-center">
-              <img 
-                src="https://images.unsplash.com/photo-1611174743420-3d7df880ce32?q=80&w=600&auto=format&fit=crop" 
-                alt="FinSmart App" 
-                className="rounded-lg shadow-xl max-w-full h-auto" 
+              <img
+                src="https://images.unsplash.com/photo-1611174743420-3d7df880ce32?q=80&w=600&auto=format&fit=crop"
+                alt="FinSmart App"
+                className="rounded-lg shadow-xl max-w-full h-auto"
               />
             </div>
           </div>
@@ -156,7 +156,7 @@ export default function LandingPage() {
               O FinSmart oferece todas as ferramentas que você precisa para organizar seu dinheiro na correria do dia a dia.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
               <div className="bg-[#e6f7f1] p-3 rounded-full w-14 h-14 flex items-center justify-center mb-4">
@@ -167,7 +167,7 @@ export default function LandingPage() {
                 A I.A da FinSmart fica com a parte chata de categorizar cada novo gasto que você envia.
               </p>
             </div>
-            
+
             <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
               <div className="bg-[#e6f7f1] p-3 rounded-full w-14 h-14 flex items-center justify-center mb-4">
                 <BarChart2 size={24} className="text-[#11ab77]" />
@@ -177,7 +177,7 @@ export default function LandingPage() {
                 Visualize em tempo real seus gastos por categoria e entenda onde seu dinheiro precisa de mais atenção.
               </p>
             </div>
-            
+
             <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
               <div className="bg-[#e6f7f1] p-3 rounded-full w-14 h-14 flex items-center justify-center mb-4">
                 <CreditCard size={24} className="text-[#11ab77]" />
@@ -187,7 +187,7 @@ export default function LandingPage() {
                 Mantenha um histórico completo de suas finanças facilitando qualquer tomada de decisão financeira em sua vida.
               </p>
             </div>
-            
+
             <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
               <div className="bg-[#e6f7f1] p-3 rounded-full w-14 h-14 flex items-center justify-center mb-4">
                 <PieChart size={24} className="text-[#11ab77]" />
@@ -210,7 +210,7 @@ export default function LandingPage() {
               Descubra como o FinSmart pode transformar sua relação com o dinheiro e ajudar você a alcançar seus objetivos financeiros.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             <div className="flex flex-col justify-center">
               <div className="mb-8">
@@ -225,7 +225,7 @@ export default function LandingPage() {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start mb-4">
                   <div className="bg-[#11ab77] p-1 rounded-full mr-3 mt-1">
                     <Check size={16} className="text-white" />
@@ -237,7 +237,7 @@ export default function LandingPage() {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start">
                   <div className="bg-[#11ab77] p-1 rounded-full mr-3 mt-1">
                     <Check size={16} className="text-white" />
@@ -251,12 +251,12 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex justify-center">
-              <img 
-                src="https://images.unsplash.com/photo-1579621970588-a35d0e7ab9b6?q=80&w=600&auto=format&fit=crop" 
-                alt="Benefícios FinSmart" 
-                className="rounded-lg shadow-xl max-w-full h-auto" 
+              <img
+                src="https://images.unsplash.com/photo-1579621970588-a35d0e7ab9b6?q=80&w=600&auto=format&fit=crop"
+                alt="Benefícios FinSmart"
+                className="rounded-lg shadow-xl max-w-full h-auto"
               />
             </div>
           </div>
@@ -272,7 +272,7 @@ export default function LandingPage() {
               Simples e objetivo. Escolha o plano que melhor se adapta à você.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Free Plan */}
             {/* <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -306,7 +306,7 @@ export default function LandingPage() {
                 </Link>
               </div>
             </div> */}
-            
+
             {/* Pro Plan */}
             {/* <div className="bg-white rounded-lg shadow-md overflow-hidden transform scale-105 border-2 border-[#11ab77]">
               <div className="bg-[#11ab77] text-white text-center py-2 text-sm font-medium">
@@ -351,7 +351,7 @@ export default function LandingPage() {
                 </Link>
               </div>
             </div> */}
-            
+
             {/* Premium Plan */}
             {/* <div className="bg-white rounded-lg shadow-md overflow-hidden">
               <div className="p-6">
@@ -455,7 +455,7 @@ export default function LandingPage() {
                 </a>
               </div>
             </div>
-            
+
           </div>
         </div>
       </section>
@@ -469,7 +469,7 @@ export default function LandingPage() {
               Milhares de pessoas já transformaram suas finanças com o FinSmart.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-[#f9fafb] p-6 rounded-lg">
               <div className="flex items-center mb-4">
@@ -492,7 +492,7 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-[#f9fafb] p-6 rounded-lg">
               <div className="flex items-center mb-4">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -514,7 +514,7 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-[#f9fafb] p-6 rounded-lg">
               <div className="flex items-center mb-4">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -550,7 +550,7 @@ export default function LandingPage() {
             Junte-se a milhares de pessoas que já estão economizando dinheiro e alcançando seus objetivos financeiros com o FinSmart.
           </p>
           <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-            <a 
+            <a
               href="#pricing"
               className="bg-white text-[#11ab77] px-8 py-3 rounded-md hover:bg-gray-100 transition-colors text-center font-medium"
             >
@@ -582,7 +582,7 @@ export default function LandingPage() {
                 </a>
               </div>
             </div>
-            
+
             <div>
               <h3 className="text-lg font-semibold mb-4">Produto</h3>
               <ul className="space-y-2">
@@ -590,7 +590,7 @@ export default function LandingPage() {
                 <li><a href="#pricing" className="text-gray-400 hover:text-white transition-colors">Planos</a></li>
               </ul>
             </div>
-            
+
             <div>
               <h3 className="text-lg font-semibold mb-4">Suporte</h3>
               <ul className="space-y-2">
@@ -600,7 +600,7 @@ export default function LandingPage() {
               </ul>
             </div>
           </div>
-          
+
           <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
             <p>&copy; {new Date().getFullYear()} FinSmart. Todos os direitos reservados.</p>
           </div>

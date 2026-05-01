@@ -55,16 +55,16 @@ const formatCurrency = (value: number | undefined) => {
 // Components
 const LoadingRow = ({ columnsCount }: { columnsCount: number }) => (
   <tr>
-    <td className="px-6 py-4 whitespace-nowrap sticky left-0 bg-white z-10">
+    <td className="px-6 py-4 whitespace-nowrap md:sticky md:left-0 bg-white z-10">
       <div className="animate-pulse h-4 bg-gray-200 rounded w-32"></div>
     </td>
-    <td className="px-6 py-4 whitespace-nowrap sticky left-[200px] bg-white z-10">
+    <td className="px-6 py-4 whitespace-nowrap md:sticky md:left-[200px] bg-white z-10">
       <div className="animate-pulse h-4 bg-gray-200 rounded w-24"></div>
     </td>
-    <td className="px-6 py-4 whitespace-nowrap sticky left-[350px] bg-white z-10">
+    <td className="px-6 py-4 whitespace-nowrap md:sticky md:left-[350px] bg-white z-10">
       <div className="animate-pulse h-4 bg-gray-200 rounded w-16"></div>
     </td>
-    <td className="px-6 py-4 whitespace-nowrap sticky left-[430px] bg-white z-10">
+    <td className="px-6 py-4 whitespace-nowrap md:sticky md:left-[430px] bg-white z-10">
       <div className="animate-pulse h-4 bg-gray-200 rounded w-20"></div>
     </td>
     <td className="px-6 py-4 whitespace-nowrap">
@@ -614,16 +614,16 @@ function Installments() {
             <table className="min-w-full divide-y divide-gray-200 border-separate border-spacing-0">
               <thead className="bg-gray-50 sticky top-0 z-20 shadow-sm">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[200px] sticky left-0 z-30">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[200px] md:sticky md:left-0 z-30">
                     Descrição
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[150px] sticky left-[200px] z-30">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[150px] md:sticky md:left-[200px] z-30">
                     Cartão
                   </th>
-                  <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[80px] sticky left-[350px] z-30">
+                  <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[80px] md:sticky md:left-[350px] z-30">
                     Parcelas
                   </th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[100px] sticky left-[430px] z-30">
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[100px] md:sticky md:left-[430px] z-30">
                     Total
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[120px]">
@@ -645,7 +645,7 @@ function Installments() {
                       {month}
                     </th>
                   ))}
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[80px] sticky right-0 z-30 border-l border-gray-200">
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-50 border-b min-w-[80px] md:sticky md:right-0 z-30 border-l border-gray-200">
                     Ações
                   </th>
                 </tr>
@@ -659,16 +659,16 @@ function Installments() {
                   <>
                     {groupedRecords.map((record, index) => (
                       <tr key={index} className="hover:bg-gray-50 transition-colors group">
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900 border-r border-gray-50 max-w-[200px] truncate sticky left-0 bg-white z-10" title={record.descricao}>
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900 border-r border-gray-50 max-w-[200px] truncate md:sticky md:left-0 bg-white z-10" title={record.descricao}>
                           {record.descricao}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 sticky left-[200px] bg-white z-10">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 md:sticky md:left-[200px] bg-white z-10">
                           {record.cardName}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 sticky left-[350px] bg-white z-10">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 md:sticky md:left-[350px] bg-white z-10">
                           <span className="bg-gray-100 px-2 py-1 rounded text-xs">{record.parcelas}x</span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900 sticky left-[430px] bg-white z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900 md:sticky md:left-[430px] bg-white z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                           {formatCurrency(record.totalValue)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 capitalize">
@@ -689,7 +689,7 @@ function Installments() {
                             {record.monthlyValues[month] > 0 ? formatCurrency(record.monthlyValues[month]) : <span className="text-gray-200">-</span>}
                           </td>
                         ))}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right sticky right-0 bg-white group-hover:bg-gray-50 border-l border-gray-100 z-10 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right md:sticky md:right-0 bg-white group-hover:bg-gray-50 border-l border-gray-100 z-10 transition-colors">
                           <button
                             onClick={() => handleOpenModal(record.descricao)}
                             className="text-gray-400 hover:text-[#11ab77] p-2 hover:bg-green-50 rounded-full transition-all"
@@ -702,10 +702,10 @@ function Installments() {
                     ))}
                     {/* Summary Row */}
                     <tr className="bg-gray-50 font-bold sticky bottom-0 z-10 border-t-2 border-gray-200">
-                      <td className="px-6 py-4 sticky left-0 bg-gray-50 z-20"></td>
-                      <td className="px-6 py-4 sticky left-[200px] bg-gray-50 z-20"></td>
-                      <td className="px-6 py-4 sticky left-[350px] bg-gray-50 z-20"></td>
-                      <td className="px-6 py-4 sticky left-[430px] bg-gray-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]"></td>
+                      <td className="px-6 py-4 md:sticky md:left-0 bg-gray-50 z-20"></td>
+                      <td className="px-6 py-4 md:sticky md:left-[200px] bg-gray-50 z-20"></td>
+                      <td className="px-6 py-4 md:sticky md:left-[350px] bg-gray-50 z-20"></td>
+                      <td className="px-6 py-4 md:sticky md:left-[430px] bg-gray-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]"></td>
                       <td colSpan={3} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 uppercase tracking-wider">
                         Total Geral das Parcelas
                       </td>
@@ -718,7 +718,7 @@ function Installments() {
                           {formatCurrency(monthlyTotals[month])}
                         </td>
                       ))}
-                      <td className="px-6 py-4 bg-gray-50 sticky right-0 z-20 border-l border-gray-200"></td>
+                      <td className="px-6 py-4 bg-gray-50 md:sticky md:right-0 z-20 border-l border-gray-200"></td>
                     </tr>
                   </>
                 ) : (
